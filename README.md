@@ -34,6 +34,12 @@ redimensionnable (poignée du coin bas-droit ; Échap ferme) :
   d'objet, or, temps de jeu, **tous les métiers** (niveau / maximum), **l'équipement** emplacement
   par emplacement (nom en couleur de qualité, niveau d'objet), et le contenu des **sacs**, de la
   **banque** et de la **banque de bataillon** (nombre d'objets, date du relevé) ;
+- **clic gauche** sur un personnage : sa **fiche** (le même détail) reste affichée dans un cadre
+  **déplaçable** (glisser) ; on peut en ouvrir plusieurs pour comparer. Dans une fiche, un **clic
+  gauche** la ferme, un **clic droit** sur une ligne marquée « » » affiche son détail : contenu des
+  **sacs**, de la **banque** ou de la **banque de bataillon** (une fiche de plus, un objet par ligne
+  avec son nombre), ou l'**infobulle de l'objet** équipé (celle de WoW, épinglée). Dans une fiche
+  de sac, le clic droit sur un objet affiche aussi son infobulle ;
 - **clic droit** sur un personnage : « Oublier ce personnage » (personnage supprimé, renommé...).
 
 ### Recherche d'objet
@@ -65,4 +71,5 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 
 ## Version
 
+`1.1.0` : fiches épinglées (clic gauche sur un personnage), détail des sacs et banques, infobulle des objets.
 `1.0.0` : première version (tableau des personnages, détail au survol, recherche d'objet, synchro).

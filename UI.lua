@@ -6,7 +6,8 @@ local P = Polypode
 -- Fenêtre PolypodeDataFrame (bouton « Data » de la fenêtre Polypode, /poly data) :
 --   * tableau sans trait de tous les personnages connus (le personnage joué en tête) : niveau,
 --     niveau d'objet, métiers principaux, or, temps de jeu, dernière connexion ; détail au survol
---     (identité, métiers, équipement, sacs et banques), clic droit = oublier le personnage ;
+--     (identité, métiers, équipement, sacs et banques), clic gauche = fiche épinglée (voir
+--     FICHES ÉPINGLÉES), clic droit = oublier le personnage ;
 --   * champ de recherche (en haut à droite) : dès 2 lettres, la liste devient celle des objets
 --     dont le nom correspond (sans accents ni casse), avec qui les possède et où.
 -- Colonnes ancrées au bord droit, à la largeur de leur plus long contenu (mesurée à chaque
@@ -20,7 +21,7 @@ local MIN_SEARCH = 2 -- lettres avant de lancer la recherche
 local frame, listPanel, searchBox
 local columnWidths = {} -- largeurs des colonnes affichées (0 = masquée)
 local measure -- texte caché servant à mesurer les cellules
-local namesPending = false -- noms d'objets demandés au serveur pendant la recherche
+local namesPending = false -- noms d'objets demandés au serveur (recherche, fiches)
 
 local GOLD_ICON = "|TInterface\\MoneyFrame\\UI-GoldIcon:12:12:2:0|t"
 local SLOT_NAMES = { "HEADSLOT", "NECKSLOT", "SHOULDERSLOT", "SHIRTSLOT", "CHESTSLOT", "WAISTSLOT",
@@ -298,10 +299,57 @@ local function TotalGold()
 	return total
 end
 
-local function CharacterTooltip(key)
+-- FICHES ÉPINGLÉES : un clic gauche sur un personnage ouvre sa fiche (le détail de l'infobulle)
+-- dans un cadre qui reste affiché, déplaçable ; plusieurs à l'écran. Clic gauche sur la fiche :
+-- la ferme (un glisser la déplace). Clic droit sur une ligne marquée « » » : son détail (contenu
+-- d'un sac ou d'une banque dans une autre fiche, objet équipé dans l'infobulle d'objet de WoW).
+-- Entrée d'une fiche : { text, detail = fonction appelée au clic droit, hint = texte d'aide }.
+
+local CARD_WIDTH = 420
+local CARD_MAX_HEIGHT = 520
+local CARD_ROW_HEIGHT = 20 -- hauteur d'une ligne de P.CreateScrollList
+local DETAIL_MARK = " |cff999999»|r"
+local cards = {} -- fiches créées (réutilisées une fois fermées)
+local OpenCard -- défini plus bas
+
+-- Infobulle d'objet de WoW, épinglée et déplaçable (comme un lien d'objet cliqué).
+local function ShowItem(itemID)
+	if type(SetItemRef) == "function" then
+		SetItemRef("item:" .. itemID, nil, "LeftButton")
+	end
+end
+
+-- Contenu d'un sac ou d'une banque : une ligne par objet (nom, nombre), triées par nom.
+local function ContainerEntries(data)
+	local entries = {}
+	for itemKey, count in pairs(data or {}) do
+		local itemID = tonumber(tostring(itemKey):match("^i(%d+)$"))
+		if itemID then
+			local name, colored = ItemName(itemID)
+			entries[#entries + 1] = {
+				sort = Normalize(name or ("~" .. itemID)),
+				text = Icon(ItemIcon(itemID)) .. " " .. (colored or ("objet n° " .. itemID)) .. Gray("  ×" .. count),
+				detail = function()
+					ShowItem(itemID)
+				end,
+				hint = "Clic droit : infobulle de l'objet",
+			}
+		end
+	end
+	table.sort(entries, function(a, b)
+		return a.sort < b.sort
+	end)
+	return entries
+end
+
+-- Lignes du détail d'un personnage (infobulle au survol et fiche épinglée).
+local function CharacterEntries(key)
 	local sections, entry = Sections(key)
 	local identity = sections.I or {}
-	local lines = { CharacterName(key) .. Gray("  " .. key) }
+	local entries = {}
+	local function Add(text, detail, hint)
+		entries[#entries + 1] = { text = detail and (text .. DETAIL_MARK) or text, detail = detail, hint = hint }
+	end
 	local className = identity.c and LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[identity.c]
 	local who = {}
 	if identity.l then
@@ -313,87 +361,221 @@ local function CharacterTooltip(key)
 		who[#who + 1] = "(" .. identity.s .. ")"
 	end
 	if #who > 0 then
-		lines[#lines + 1] = table.concat(who, " ")
+		Add(table.concat(who, " "))
 	end
 	local place = {}
 	place[#place + 1] = identity.f
 	place[#place + 1] = identity.z
 	if #place > 0 then
-		lines[#lines + 1] = table.concat(place, " · ")
+		Add(table.concat(place, " · "))
 	end
 	if identity.i then
-		lines[#lines + 1] = "Niveau d'objet : " .. identity.i
+		Add("Niveau d'objet : " .. identity.i)
 	end
 	if identity.g then
-		lines[#lines + 1] = "Or : " .. FormatGold(identity.g)
+		Add("Or : " .. FormatGold(identity.g))
 	end
 	local seconds = PlayedSeconds(key)
 	if seconds then
-		lines[#lines + 1] = "Temps de jeu : " .. FormatDuration(seconds)
+		Add("Temps de jeu : " .. FormatDuration(seconds))
 	end
-	lines[#lines + 1] = "Vu : " .. SeenText(key)
+	Add("Vu : " .. SeenText(key))
 
 	local professions = Professions(key)
 	if #professions > 0 then
-		lines[#lines + 1] = " "
-		lines[#lines + 1] = "|cffffd200Métiers|r"
+		Add(" ")
+		Add("|cffffd200Métiers|r")
 		for _, profession in ipairs(professions) do
-			lines[#lines + 1] = "  " .. Icon(profession.icon) .. " " .. profession.name .. " : "
-				.. profession.level .. "/" .. profession.max
+			Add("  " .. Icon(profession.icon) .. " " .. profession.name .. " : " .. profession.level .. "/" .. profession.max)
 		end
 	end
 
 	if sections.E then
-		lines[#lines + 1] = " "
-		lines[#lines + 1] = "|cffffd200Équipement|r"
+		Add(" ")
+		Add("|cffffd200Équipement|r")
 		for slot, global in ipairs(SLOT_NAMES) do
 			local value = sections.E[tostring(slot)]
 			local itemID, level = tostring(value or ""):match("^(%d+)%-(%d+)$")
 			if itemID then
 				itemID = tonumber(itemID)
 				local _, colored = ItemName(itemID)
-				lines[#lines + 1] = "  " .. (_G[global] or ("Emplacement " .. slot)) .. " : " .. Icon(ItemIcon(itemID))
-					.. " " .. (colored or ("objet n° " .. itemID)) .. ((tonumber(level) or 0) > 0 and Gray(" " .. level) or "")
+				Add("  " .. (_G[global] or ("Emplacement " .. slot)) .. " : " .. Icon(ItemIcon(itemID)) .. " "
+					.. (colored or ("objet n° " .. itemID)) .. ((tonumber(level) or 0) > 0 and Gray(" " .. level) or ""),
+					function()
+						ShowItem(itemID)
+					end, "Clic droit : infobulle de l'objet")
 			end
 		end
 	end
 
+	local name = P.GetDisplayName(key)
 	local containers = {}
 	for _, part in ipairs({ { "B", "Sacs" }, { "K", "Banque" } }) do
-		if sections[part[1]] then
-			local total, distinct = ContainerCount(sections[part[1]])
+		local data = sections[part[1]]
+		if data then
+			local total, distinct = ContainerCount(data)
 			local when = part[1] == "K" and entry and entry.t.K and Gray(" (relevée " .. FormatWhen(entry.t.K) .. ")") or ""
-			containers[#containers + 1] = "  " .. part[2] .. " : " .. total .. " objets (" .. distinct .. " différents)" .. when
+			containers[#containers + 1] = { "  " .. part[2] .. " : " .. total .. " objets (" .. distinct .. " différents)" .. when,
+				function()
+					OpenCard(part[2] .. " de " .. name, function()
+						return ContainerEntries((Sections(key))[part[1]])
+					end)
+				end }
 		end
 	end
 	local bank = WarbandBanks()[AccountOf(key)]
 	if bank then
 		local total, distinct = ContainerCount(bank.data)
-		containers[#containers + 1] = "  Banque de bataillon : " .. total .. " objets (" .. distinct .. " différents)"
-			.. Gray(" (relevée " .. FormatWhen(bank.version) .. ")")
+		local account = AccountOf(key)
+		containers[#containers + 1] = { "  Banque de bataillon : " .. total .. " objets (" .. distinct .. " différents)"
+			.. Gray(" (relevée " .. FormatWhen(bank.version) .. ")"),
+			function()
+				OpenCard("Banque de bataillon", function()
+					local current = WarbandBanks()[account]
+					return ContainerEntries(current and current.data)
+				end)
+			end }
 	end
 	if #containers > 0 then
-		lines[#lines + 1] = " "
-		lines[#lines + 1] = "|cffffd200Sacs et banques|r"
+		Add(" ")
+		Add("|cffffd200Sacs et banques|r")
 		for _, line in ipairs(containers) do
-			lines[#lines + 1] = line
+			Add(line[1], line[2], "Clic droit : contenu détaillé")
 		end
 		if not (entry and entry.t.K) then
-			lines[#lines + 1] = "  " .. Gray("Banque : ouvrez-la une fois avec ce personnage pour la relever")
+			Add("  " .. Gray("Banque : ouvrez-la une fois avec ce personnage pour la relever"))
 		end
 	end
+	return entries
+end
+
+-- Infobulle au survol d'un personnage : ses lignes de détail, et les actions.
+local function CharacterTooltip(key)
+	local lines = { CharacterName(key) .. Gray("  " .. key) }
+	for _, entry in ipairs(CharacterEntries(key)) do
+		lines[#lines + 1] = entry.text
+	end
+	lines[#lines + 1] = " "
+	lines[#lines + 1] = Gray("Clic gauche : épingler cette fiche (déplaçable, plusieurs possibles)")
 	if not IsOwn(key) then
-		lines[#lines + 1] = " "
 		lines[#lines + 1] = Gray("Clic droit : oublier ce personnage")
 	end
 	return lines
+end
+
+-- Remplit une fiche (titre et lignes) et ajuste sa hauteur à son contenu.
+local function FillCard(card)
+	local entries = card.build() or {}
+	card.TitleText:SetText(card.title)
+	P.SetListData(card.panel, entries)
+	card.panel.emptyText:SetText("Vide.")
+	card:SetHeight(math.min(CARD_MAX_HEIGHT, 40 + math.max(#entries, 1) * CARD_ROW_HEIGHT + 16))
+end
+
+local function CreateCard()
+	local card = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+	card:SetSize(CARD_WIDTH, 200)
+	card:SetFrameStrata("DIALOG")
+	card:SetToplevel(true)
+	card:SetClampedToScreen(true)
+	card:SetMovable(true)
+	card:EnableMouse(true)
+	card:SetBackdrop({
+		bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+		edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+		edgeSize = 16,
+		insets = { left = 4, right = 4, top = 4, bottom = 4 },
+	})
+	card:SetBackdropColor(0, 0, 0, 0.92)
+
+	local title = card:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	title:SetPoint("TOPLEFT", 12, -12)
+	title:SetPoint("RIGHT", -12, 0)
+	title:SetJustifyH("LEFT")
+	title:SetWordWrap(false)
+	card.TitleText = title
+
+	-- Glisser déplace la fiche ; un clic gauche sans déplacement la ferme.
+	card:SetScript("OnMouseDown", function(self, button)
+		if button == "LeftButton" then
+			self.downX, self.downY = GetCursorPosition()
+			self:StartMoving()
+		end
+	end)
+	card:SetScript("OnMouseUp", function(self, button)
+		if button ~= "LeftButton" or not self.downX then
+			return
+		end
+		self:StopMovingOrSizing()
+		local x, y = GetCursorPosition()
+		if math.abs(x - self.downX) + math.abs(y - self.downY) < 4 then
+			self:Hide()
+		end
+		self.downX = nil
+	end)
+
+	local panel = P.CreatePanel(card, "")
+	panel:SetPoint("TOPLEFT", 8, -32)
+	panel:SetPoint("BOTTOMRIGHT", -8, 8)
+	panel:SetBackdropColor(0, 0, 0, 0)
+	panel:SetBackdropBorderColor(0, 0, 0, 0)
+	P.CreateScrollList(panel, function(data)
+		return data.text
+	end, 6, {
+		inset = 4,
+		onClick = function(data, button)
+			if button == "RightButton" then
+				if data.detail then
+					data.detail()
+				end
+			else
+				card:Hide()
+			end
+		end,
+		tooltip = function(data)
+			return data.hint and { data.hint, "Clic gauche : fermer la fiche" } or nil
+		end,
+	})
+	card.panel = panel
+	P.SkinFrame(card)
+	cards[#cards + 1] = card
+	return card
+end
+
+-- Ouvre une fiche épinglée titrée title, dont build() renvoie les lignes (relu à chaque
+-- rafraîchissement de la fenêtre), près du curseur, décalée des fiches déjà ouvertes.
+OpenCard = function(title, build)
+	local card
+	for _, existing in ipairs(cards) do
+		if not existing:IsShown() then
+			card = existing
+			break
+		end
+	end
+	card = card or CreateCard()
+	card.title, card.build = title, build
+	local scale = UIParent:GetEffectiveScale()
+	local x, y = GetCursorPosition()
+	card:ClearAllPoints()
+	card:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x / scale + 16, y / scale + 16)
+	card:Show()
+	card:Raise()
+	FillCard(card)
+end
+
+-- Fiches ouvertes : relues (noms d'objets arrivés, données reçues).
+local function RefreshCards()
+	for _, card in ipairs(cards) do
+		if card:IsShown() then
+			FillCard(card)
+		end
+	end
 end
 
 -- RECHERCHE D'OBJETS ------------------------------------------------------------------------------
 
 -- Objets dont le nom contient query : { itemID, name, colored, total, holders, warband }.
 local function SearchItems(query)
-	namesPending = false
 	local needle = Normalize(query)
 	local found = {} -- [itemID] = résultat
 	local function Add(itemID, holderKey, place, count)
@@ -666,8 +848,15 @@ local function Build()
 		return CharacterName(data.key)
 	end, nil, {
 		onClick = function(data, button)
-			if button == "RightButton" and data.key then
+			if not data.key then
+				return
+			elseif button == "RightButton" then
 				ShowForgetMenu(data.key)
+			else
+				local key = data.key
+				OpenCard(CharacterName(key), function()
+					return CharacterEntries(key)
+				end)
 			end
 		end,
 		tooltip = function(data)
@@ -712,6 +901,8 @@ end
 
 -- Remplit la liste, si la fenêtre est ouverte.
 function ns.Refresh()
+	namesPending = false -- remis à vrai par ItemName si un nom manque encore
+	RefreshCards()
 	if not frame or not frame:IsShown() then
 		return
 	end
@@ -759,7 +950,7 @@ if not (C_EventUtils and C_EventUtils.IsEventValid) or C_EventUtils.IsEventValid
 	itemEvents:RegisterEvent("ITEM_DATA_LOAD_RESULT")
 end
 itemEvents:SetScript("OnEvent", function()
-	if refreshPending or not namesPending or not frame or not frame:IsShown() then
+	if refreshPending or not namesPending then
 		return
 	end
 	refreshPending = true
