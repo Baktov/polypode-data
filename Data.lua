@@ -12,7 +12,9 @@ local P = Polypode -- dépendance obligatoire (## Dependencies: Polypode), charg
 --     f faction, g or (pièces de cuivre), z zone, p temps de jeu (s) relevé à la date pa ;
 --   T métiers : p1 / p2 principaux, s1 / s2 / s3 archéologie, pêche, cuisine =
 --     « skillLine/niveau/max/icône/nom » ;
---   E équipement : <emplacement 1-19> = « itemID-niveau d'objet » ;
+--   E équipement : <emplacement 1-19> = « niveau d'objet@chaîne d'objet » (la chaîne du lien,
+--     « itemID:enchantement:gemmes...:bonus... », sans « item: » : enchantement, gemmes et
+--     améliorations compris ; les « : » passent, seuls « , » et « = » séparent) ;
 --   B sacs, K banque du personnage, A banque de bataillon : i<itemID> = nombre.
 -- K et A ne sont lisibles que banque ouverte : sinon les dernières connues restent.
 --
@@ -102,7 +104,8 @@ local function ReadEquipment()
 		if itemID then
 			local link = GetInventoryItemLink("player", slot)
 			local level = link and C_Item and C_Item.GetDetailedItemLevelInfo and C_Item.GetDetailedItemLevelInfo(link)
-			data[tostring(slot)] = itemID .. "-" .. (level or 0) -- « - » : ne doit pas se lire comme un nombre
+			local itemString = link and link:match("|Hitem:([^|]+)|h")
+			data[tostring(slot)] = (level or 0) .. "@" .. (itemString or itemID)
 		end
 	end
 	return data

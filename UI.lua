@@ -305,18 +305,75 @@ end
 -- d'un sac ou d'une banque dans une autre fiche, objet équipé dans l'infobulle d'objet de WoW).
 -- Entrée d'une fiche : { text, detail = fonction appelée au clic, hint = texte d'aide }.
 
-local CARD_WIDTH = 420
+local CARD_WIDTH = 460
 local CARD_MAX_HEIGHT = 520
 local CARD_ROW_HEIGHT = 20 -- hauteur d'une ligne de P.CreateScrollList
 local DETAIL_MARK = " |cff999999»|r"
 local cards = {} -- fiches créées (réutilisées une fois fermées)
 local OpenCard -- défini plus bas
 
--- Infobulle d'objet de WoW, épinglée et déplaçable (comme un lien d'objet cliqué).
-local function ShowItem(itemID)
+-- Infobulle d'objet de WoW, épinglée et déplaçable (comme un lien d'objet cliqué) ; item :
+-- identifiant ou lien « item:... » complet (enchantement, gemmes, bonus).
+local function ShowItem(item)
 	if type(SetItemRef) == "function" then
-		SetItemRef("item:" .. itemID, nil, "LeftButton")
+		item = tostring(item)
+		SetItemRef(item:match("^item:") and item or ("item:" .. item), nil, "LeftButton")
 	end
+end
+
+-- Pièce d'équipement enregistrée : itemID, niveau d'objet, lien « item:... » (format
+-- « niveau@chaîne d'objet », ou l'ancien « itemID-niveau » sans enchantement ni gemmes).
+local function EquippedItem(value)
+	value = tostring(value or "")
+	local level, itemString = value:match("^(%d+)@(.+)$")
+	if itemString then
+		return tonumber(itemString:match("^(%d+)")), tonumber(level), "item:" .. itemString
+	end
+	local itemID, oldLevel = value:match("^(%d+)%-(%d+)$")
+	if itemID then
+		return tonumber(itemID), tonumber(oldLevel), "item:" .. itemID
+	end
+end
+
+-- Motif Lua d'une chaîne de format WoW (« Enchanté : %s » → « ^Enchanté : (.+)$ »).
+local function FormatPattern(format)
+	if type(format) ~= "string" then
+		return nil
+	end
+	local pattern = format:gsub("([%(%)%.%+%-%*%?%[%]%^%$])", "%%%1"):gsub("%%s", "(.+)"):gsub("%%d", "%%d+")
+	return "^" .. pattern .. "$"
+end
+
+local ENCHANT_PATTERN = FormatPattern(ENCHANTED_TOOLTIP_LINE)
+local UPGRADE_PATTERN = FormatPattern(ITEM_UPGRADE_TOOLTIP_FORMAT_STRING)
+
+-- Améliorations d'une pièce, lues dans son lien : { enchant, upgrade, gems = { texte... } }.
+-- Enchantement et niveau d'amélioration : lignes de l'infobulle de l'objet (C_TooltipInfo) ;
+-- gemmes : C_Item.GetItemGem.
+local function ItemEnhancements(link)
+	local result = { gems = {} }
+	local info = C_TooltipInfo and C_TooltipInfo.GetHyperlink and C_TooltipInfo.GetHyperlink(link)
+	for _, line in ipairs(info and info.lines or {}) do
+		local text = line.leftText
+		if type(text) == "string" and not (issecretvalue and issecretvalue(text)) then
+			local plain = text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+			if ENCHANT_PATTERN and not result.enchant and plain:match(ENCHANT_PATTERN) then
+				result.enchant = plain:match(ENCHANT_PATTERN)
+			elseif UPGRADE_PATTERN and not result.upgrade and plain:match(UPGRADE_PATTERN) then
+				result.upgrade = plain:match(UPGRADE_PATTERN) and plain:gsub("^[^:]*:%s*", "")
+			end
+		end
+	end
+	if C_Item and C_Item.GetItemGem then
+		for index = 1, 4 do
+			local name, gemLink = C_Item.GetItemGem(link, index)
+			if name then
+				local gemID = gemLink and tonumber(gemLink:match("item:(%d+)"))
+				result.gems[#result.gems + 1] = Icon(gemID and ItemIcon(gemID), 12) .. " " .. name
+			end
+		end
+	end
+	return result
 end
 
 -- Contenu d'un sac ou d'une banque : une ligne par objet (nom, nombre), triées par nom.
@@ -394,16 +451,24 @@ local function CharacterEntries(key)
 		Add(" ")
 		Add("|cffffd200Équipement|r")
 		for slot, global in ipairs(SLOT_NAMES) do
-			local value = sections.E[tostring(slot)]
-			local itemID, level = tostring(value or ""):match("^(%d+)%-(%d+)$")
+			local itemID, level, link = EquippedItem(sections.E[tostring(slot)])
 			if itemID then
-				itemID = tonumber(itemID)
 				local _, colored = ItemName(itemID)
+				local extra = ItemEnhancements(link)
+				local function ShowThis()
+					ShowItem(link)
+				end
 				Add("  " .. (_G[global] or ("Emplacement " .. slot)) .. " : " .. Icon(ItemIcon(itemID)) .. " "
-					.. (colored or ("objet n° " .. itemID)) .. ((tonumber(level) or 0) > 0 and Gray(" " .. level) or ""),
-					function()
-						ShowItem(itemID)
-					end, "Clic : infobulle de l'objet")
+					.. (colored or ("objet n° " .. itemID)) .. ((level or 0) > 0 and Gray(" " .. level) or "")
+					.. (extra.upgrade and Gray("  " .. extra.upgrade) or ""),
+					ShowThis, "Clic : infobulle de l'objet (enchantement, gemmes, améliorations)")
+				-- Enchantement et gemmes sous la pièce.
+				if extra.enchant then
+					Add("      |cff40ff40" .. extra.enchant .. "|r")
+				end
+				if #extra.gems > 0 then
+					Add("      " .. table.concat(extra.gems, "   "))
+				end
 			end
 		end
 	end
@@ -603,7 +668,7 @@ local function SearchItems(query)
 			end
 		end
 		for _, value in pairs(sections.E or {}) do
-			Add(tostring(value):match("^(%d+)%-"), key, "E", 1)
+			Add((EquippedItem(value)), key, "E", 1)
 		end
 	end
 	for account, bank in pairs(WarbandBanks()) do
