@@ -16,7 +16,9 @@ local P = Polypode -- dépendance obligatoire (## Dependencies: Polypode), charg
 --     « itemID:enchantement:gemmes...:bonus... », sans « item: » : enchantement, gemmes et
 --     améliorations compris ; les « : » passent, seuls « , » et « = » séparent) ;
 --   B sacs, K banque du personnage, A banque de bataillon : i<itemID> = nombre.
--- K et A ne sont lisibles que banque ouverte : sinon les dernières connues restent.
+--   G banque de guilde (relevée par ce personnage) : n nom de la guilde, m or (cuivre), i<itemID>.
+-- K, A et G ne sont lisibles que banque ouverte : sinon les dernières connues restent. Le nom de
+-- la guilde du personnage est dans I (gu).
 --
 -- Sauvegarde : PolypodeDataDB.chars[clé] = { s = { [section] = données }, t = { [section] =
 -- version }, seen = dernière date où le personnage a été vu connecté }. Version = heure serveur
@@ -29,13 +31,17 @@ local P = Polypode -- dépendance obligatoire (## Dependencies: Polypode), charg
 --   DATA:token:clé:section:flag:version:k=v,k=v,... — une section (flag N premier fragment,
 --     + suite), en réponse à DATAREQ, et aux clients connectés 10 s après un changement.
 
-ns.SECTIONS = { "I", "T", "E", "B", "K", "A" }
+ns.SECTIONS = { "I", "T", "E", "B", "K", "A", "G" }
 
 local SCAN_DELAY = 2 -- secondes : regroupe les rafales d'événements (sacs, or)
 local SEND_DELAY = 10 -- secondes : envoi des sections modifiées aux clients connectés
 
 local store -- PolypodeDataDB.chars
 local bankOpen = false
+local guildBankOpen = false
+local GUILD_TAB_SLOTS = 98 -- emplacements d'un onglet de banque de guilde
+local guildTabs = {} -- [onglet] = { i<itemID> = nombre }, onglets relevés pendant cette visite
+local queriedTabs = {} -- onglets demandés au serveur à l'ouverture
 local played, playedAt -- temps de jeu du personnage joué (TIME_PLAYED_MSG) et date du relevé
 
 -- Texte sûr dans un message (séparateurs retirés).
@@ -71,6 +77,8 @@ local function ReadIdentity()
 	data.f = faction and Clean(factionName or faction) or nil
 	data.g = GetMoney()
 	data.z = GetRealZoneText and Clean(GetRealZoneText()) or nil
+	local guild = GetGuildInfo and GetGuildInfo("player")
+	data.gu = guild and Clean(guild) or nil
 	data.p, data.pa = played, playedAt
 	return data
 end
@@ -170,7 +178,74 @@ local READERS = {
 	A = function()
 		return bankOpen and ReadContainers("A") or nil
 	end,
+	G = function()
+		return ns.ReadGuildBank()
+	end,
 }
+
+-- BANQUE DE GUILDE : à l'ouverture, tous les onglets visibles sont demandés au serveur
+-- (QueryGuildBankTab) ; chaque onglet reçu (GUILDBANKBAGSLOTS_CHANGED) est relu. La section G
+-- réunit les onglets relevés pendant la visite (nil tant qu'aucun ne l'est : on garde l'ancienne).
+local function OpenGuildBank()
+	guildBankOpen = true
+	wipe(guildTabs)
+	wipe(queriedTabs)
+	if not (GetNumGuildBankTabs and GetGuildBankTabInfo and QueryGuildBankTab) then
+		return
+	end
+	for tab = 1, GetNumGuildBankTabs() or 0 do
+		local _, _, isViewable = GetGuildBankTabInfo(tab)
+		if isViewable then
+			queriedTabs[tab] = true
+			QueryGuildBankTab(tab)
+		end
+	end
+end
+
+local function ScanGuildTabs()
+	if not (GetGuildBankItemLink and GetGuildBankItemInfo) then
+		return
+	end
+	for tab in pairs(queriedTabs) do
+		local items, any = {}, false
+		for slot = 1, GUILD_TAB_SLOTS do
+			local link = GetGuildBankItemLink(tab, slot)
+			local itemID = link and tonumber(link:match("|Hitem:(%d+)"))
+			if itemID then
+				local _, count = GetGuildBankItemInfo(tab, slot)
+				local key = "i" .. itemID
+				items[key] = (items[key] or 0) + (count or 1)
+				any = true
+			end
+		end
+		-- Onglet vide ou pas encore reçu : on ne remplace qu'un onglet déjà lu par du contenu.
+		if any or guildTabs[tab] == nil then
+			guildTabs[tab] = any and items or guildTabs[tab]
+		end
+	end
+end
+
+function ns.ReadGuildBank()
+	if not guildBankOpen then
+		return nil
+	end
+	ScanGuildTabs()
+	local data = {}
+	local any = false
+	for _, items in pairs(guildTabs) do
+		for key, count in pairs(items) do
+			data[key] = (data[key] or 0) + count
+			any = true
+		end
+	end
+	if not any then
+		return nil
+	end
+	local guild = GetGuildInfo and GetGuildInfo("player")
+	data.n = guild and Clean(guild) or nil
+	data.m = GetGuildBankMoney and GetGuildBankMoney() or nil
+	return data
+end
 
 -- SAUVEGARDE -------------------------------------------------------------------------------
 
@@ -437,6 +512,8 @@ for _, event in ipairs({
 	"PLAYER_SPECIALIZATION_CHANGED", "PLAYER_EQUIPMENT_CHANGED", "SKILL_LINES_CHANGED",
 	"BAG_UPDATE_DELAYED", "BANKFRAME_OPENED", "BANKFRAME_CLOSED", "PLAYERBANKSLOTS_CHANGED",
 	"PLAYER_ACCOUNT_BANK_TAB_SLOTS_CHANGED", "BANK_TABS_CHANGED", "TIME_PLAYED_MSG",
+	"PLAYER_INTERACTION_MANAGER_FRAME_SHOW", "PLAYER_INTERACTION_MANAGER_FRAME_HIDE", -- banque de guilde
+	"GUILDBANKBAGSLOTS_CHANGED", "GUILDBANK_UPDATE_MONEY", "PLAYER_GUILD_UPDATE",
 }) do
 	if not (C_EventUtils and C_EventUtils.IsEventValid) or C_EventUtils.IsEventValid(event) then
 		pcall(events.RegisterEvent, events, event)
@@ -470,6 +547,18 @@ events:SetScript("OnEvent", function(_, event, ...)
 		Update()
 		bankOpen = false
 		return
+	elseif event == "PLAYER_INTERACTION_MANAGER_FRAME_SHOW" or event == "PLAYER_INTERACTION_MANAGER_FRAME_HIDE" then
+		local guildBanker = Enum and Enum.PlayerInteractionType and Enum.PlayerInteractionType.GuildBanker
+		if not guildBanker or ... ~= guildBanker then
+			return
+		end
+		if event == "PLAYER_INTERACTION_MANAGER_FRAME_SHOW" then
+			OpenGuildBank()
+		else
+			Update() -- dernier relevé, puis fermeture
+			guildBankOpen = false
+			return
+		end
 	end
 	ScheduleUpdate()
 end)

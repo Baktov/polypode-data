@@ -34,11 +34,13 @@ redimensionnable (poignée du coin bas-droit ; Échap ferme) :
   d'objet, or, temps de jeu, **tous les métiers** (niveau / maximum), **l'équipement** emplacement
   par emplacement (nom en couleur de qualité, niveau d'objet, **niveau d'amélioration** —
   « Champion 4/6 » —, **enchantement** en vert et **gemmes** sous la pièce), et le contenu des **sacs**, de la
-  **banque** et de la **banque de bataillon** (nombre d'objets, date du relevé) ;
+  **banque**, de la **banque de bataillon** et de la **banque de guilde** du personnage (nombre
+  d'objets, or de la guilde, date du relevé) ;
 - **clic gauche** sur un personnage : sa **fiche** (le même détail) reste affichée dans un cadre
   **déplaçable** (glisser) ; on peut en ouvrir plusieurs pour comparer ; la **croix** en haut à
   droite la ferme. Un **clic** (gauche ou droit) sur une ligne marquée « » » affiche son détail :
-  contenu des **sacs**, de la **banque** ou de la **banque de bataillon** (une fiche de plus, un
+  contenu des **sacs**, de la **banque**, de la **banque de bataillon** ou de la **banque de
+  guilde** (une fiche de plus, un
   objet par ligne avec son nombre), ou l'**infobulle de l'objet** équipé (celle de WoW, épinglée, avec son
   enchantement, ses gemmes et ses bonus exacts).
   Dans une fiche de sac, un clic sur un objet affiche aussi son infobulle ;
@@ -49,7 +51,7 @@ redimensionnable (poignée du coin bas-droit ; Échap ferme) :
 Le champ **Rechercher un objet** (en haut à droite) : dès 2 lettres, la liste devient celle des
 objets dont le nom contient le texte (sans accents ni majuscules), dans les sacs, les banques et
 l'équipement de tous les personnages. Chaque ligne donne le total et, à droite, qui les possède
-(« Bataillon » pour la banque de bataillon) ; l'infobulle précise où (sacs, banque, équipé). Les
+(« Bataillon » pour la banque de bataillon, « Guilde … » pour une banque de guilde) ; l'infobulle précise où (sacs, banque, équipé). Les
 noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se complète seule.
 
 ---
@@ -67,12 +69,16 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
   changement part aux clients connectés 10 secondes après (butin ramassé : un seul envoi groupé).
 - La banque de bataillon est commune aux personnages d'un même compte Battle.net : la plus
   récente est affichée.
+- **Banque de guilde** : relevée quand un de vos personnages l'ouvre (tous les onglets qu'il peut
+  voir sont demandés au serveur à l'ouverture) ; la plus récente de chaque guilde est affichée
+  dans la fiche de chaque personnage de cette guilde, et comptée dans la recherche.
 - Sur **WoW Forever**, ce qui n'existe pas (banque de bataillon, spécialisations...) reste vide.
 
 ---
 
 ## Version
 
+`1.3.0` : banque de guilde (fiche, détail, recherche).
 `1.2.0` : équipement relevé avec son lien complet : enchantement, gemmes et niveau d'amélioration affichés.
 `1.1.1` : fiches fermées par une croix, détail ouvert par un clic.
 `1.1.0` : fiches épinglées (clic gauche sur un personnage), détail des sacs et banques, infobulle des objets.

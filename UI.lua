@@ -186,9 +186,11 @@ end
 -- Nombre total d'objets et d'objets différents d'une section de sac.
 local function ContainerCount(data)
 	local total, distinct = 0, 0
-	for _, count in pairs(data or {}) do
-		total = total + (tonumber(count) or 0)
-		distinct = distinct + 1
+	for key, count in pairs(data or {}) do
+		if tostring(key):match("^i%d+$") then -- objets seulement (pas le nom ni l'or d'une guilde)
+			total = total + (tonumber(count) or 0)
+			distinct = distinct + 1
+		end
 	end
 	return total, distinct
 end
@@ -213,6 +215,20 @@ local function WarbandBanks()
 			if not banks[account] or banks[account].version < version then
 				banks[account] = { key = key, data = sections.A, version = version }
 			end
+		end
+	end
+	return banks
+end
+
+-- Banque de guilde la plus récente par guilde : { [nom] = { key, data, version } }.
+local function GuildBanks()
+	local banks = {}
+	for key in pairs(ns.GetKeys()) do
+		local sections, entry = Sections(key)
+		local version = entry and tonumber(entry.t.G)
+		local guild = sections.G and sections.G.n
+		if guild and version and (not banks[guild] or banks[guild].version < version) then
+			banks[guild] = { key = key, data = sections.G, version = version }
 		end
 	end
 	return banks
@@ -501,6 +517,21 @@ local function CharacterEntries(key)
 				end)
 			end }
 	end
+	local guild = identity.gu
+	local guildBank = guild and GuildBanks()[guild]
+	if guildBank then
+		local total, distinct = ContainerCount(guildBank.data)
+		local money = tonumber(guildBank.data.m)
+		containers[#containers + 1] = { "  Banque de guilde (" .. guild .. ") : " .. total .. " objets (" .. distinct
+			.. " différents)" .. (money and (" · " .. FormatGold(money)) or "")
+			.. Gray(" (relevée " .. FormatWhen(guildBank.version) .. ")"),
+			function()
+				OpenCard("Banque de guilde " .. guild, function()
+					local current = GuildBanks()[guild]
+					return ContainerEntries(current and current.data)
+				end)
+			end }
+	end
 	if #containers > 0 then
 		Add(" ")
 		Add("|cffffd200Sacs et banques|r")
@@ -509,6 +540,9 @@ local function CharacterEntries(key)
 		end
 		if not (entry and entry.t.K) then
 			Add("  " .. Gray("Banque : ouvrez-la une fois avec ce personnage pour la relever"))
+		end
+		if guild and not guildBank then
+			Add("  " .. Gray("Banque de guilde : ouvrez-la une fois (avec un personnage de la guilde) pour la relever"))
 		end
 	end
 	return entries
@@ -676,6 +710,11 @@ local function SearchItems(query)
 			Add(itemKey:match("^i(%d+)$"), "warband:" .. account, "A", tonumber(count) or 0)
 		end
 	end
+	for guild, bank in pairs(GuildBanks()) do
+		for itemKey, count in pairs(bank.data) do
+			Add(tostring(itemKey):match("^i(%d+)$"), "guild:" .. guild, "G", tonumber(count) or 0)
+		end
+	end
 	local results = {}
 	for _, result in pairs(found) do
 		if result then
@@ -692,11 +731,15 @@ local function HolderName(holderKey)
 	if holderKey:match("^warband:") then
 		return "|cff00ccffBataillon|r"
 	end
+	local guild = holderKey:match("^guild:(.+)$")
+	if guild then
+		return "|cff40ff40Guilde " .. guild .. "|r"
+	end
 	return CharacterName(holderKey)
 end
 
 local function HolderCount(holder)
-	return (holder.B or 0) + (holder.K or 0) + (holder.E or 0) + (holder.A or 0)
+	return (holder.B or 0) + (holder.K or 0) + (holder.E or 0) + (holder.A or 0) + (holder.G or 0)
 end
 
 local function ResultRightText(result)
