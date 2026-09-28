@@ -300,10 +300,10 @@ local function TotalGold()
 end
 
 -- FICHES ÉPINGLÉES : un clic gauche sur un personnage ouvre sa fiche (le détail de l'infobulle)
--- dans un cadre qui reste affiché, déplaçable ; plusieurs à l'écran. Clic gauche sur la fiche :
--- la ferme (un glisser la déplace). Clic droit sur une ligne marquée « » » : son détail (contenu
+-- dans un cadre qui reste affiché, déplaçable (glisser) ; plusieurs à l'écran ; croix en haut à
+-- droite pour la fermer. Clic (gauche ou droit) sur une ligne marquée « » » : son détail (contenu
 -- d'un sac ou d'une banque dans une autre fiche, objet équipé dans l'infobulle d'objet de WoW).
--- Entrée d'une fiche : { text, detail = fonction appelée au clic droit, hint = texte d'aide }.
+-- Entrée d'une fiche : { text, detail = fonction appelée au clic, hint = texte d'aide }.
 
 local CARD_WIDTH = 420
 local CARD_MAX_HEIGHT = 520
@@ -332,7 +332,7 @@ local function ContainerEntries(data)
 				detail = function()
 					ShowItem(itemID)
 				end,
-				hint = "Clic droit : infobulle de l'objet",
+				hint = "Clic : infobulle de l'objet",
 			}
 		end
 	end
@@ -403,7 +403,7 @@ local function CharacterEntries(key)
 					.. (colored or ("objet n° " .. itemID)) .. ((tonumber(level) or 0) > 0 and Gray(" " .. level) or ""),
 					function()
 						ShowItem(itemID)
-					end, "Clic droit : infobulle de l'objet")
+					end, "Clic : infobulle de l'objet")
 			end
 		end
 	end
@@ -440,7 +440,7 @@ local function CharacterEntries(key)
 		Add(" ")
 		Add("|cffffd200Sacs et banques|r")
 		for _, line in ipairs(containers) do
-			Add(line[1], line[2], "Clic droit : contenu détaillé")
+			Add(line[1], line[2], "Clic : contenu détaillé")
 		end
 		if not (entry and entry.t.K) then
 			Add("  " .. Gray("Banque : ouvrez-la une fois avec ce personnage pour la relever"))
@@ -495,24 +495,16 @@ local function CreateCard()
 	title:SetWordWrap(false)
 	card.TitleText = title
 
-	-- Glisser déplace la fiche ; un clic gauche sans déplacement la ferme.
-	card:SetScript("OnMouseDown", function(self, button)
-		if button == "LeftButton" then
-			self.downX, self.downY = GetCursorPosition()
-			self:StartMoving()
-		end
-	end)
-	card:SetScript("OnMouseUp", function(self, button)
-		if button ~= "LeftButton" or not self.downX then
-			return
-		end
-		self:StopMovingOrSizing()
-		local x, y = GetCursorPosition()
-		if math.abs(x - self.downX) + math.abs(y - self.downY) < 4 then
-			self:Hide()
-		end
-		self.downX = nil
-	end)
+	title:SetPoint("RIGHT", -30, 0) -- place de la croix
+
+	-- Glisser déplace la fiche ; la croix la ferme.
+	card:RegisterForDrag("LeftButton")
+	card:SetScript("OnDragStart", card.StartMoving)
+	card:SetScript("OnDragStop", card.StopMovingOrSizing)
+
+	local closeBtn = CreateFrame("Button", nil, card, "UIPanelCloseButton")
+	closeBtn:SetPoint("TOPRIGHT", -2, -2)
+	card.CloseButton = closeBtn
 
 	local panel = P.CreatePanel(card, "")
 	panel:SetPoint("TOPLEFT", 8, -32)
@@ -523,17 +515,13 @@ local function CreateCard()
 		return data.text
 	end, 6, {
 		inset = 4,
-		onClick = function(data, button)
-			if button == "RightButton" then
-				if data.detail then
-					data.detail()
-				end
-			else
-				card:Hide()
+		onClick = function(data)
+			if data.detail then
+				data.detail()
 			end
 		end,
 		tooltip = function(data)
-			return data.hint and { data.hint, "Clic gauche : fermer la fiche" } or nil
+			return data.hint and { data.hint } or nil
 		end,
 	})
 	card.panel = panel
