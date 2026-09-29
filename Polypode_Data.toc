@@ -2,7 +2,7 @@
 ## Title: Polypode Data
 ## Notes: Données des personnages pour Polypode : niveau, or, métiers, équipement, sacs et banques, avec recherche d'objet.
 ## Author: Baktov
-## Version: 1.6.0
+## Version: 1.7.0
 ## Dependencies: Polypode
 ## SavedVariables: PolypodeDataDB
 ## Category: Polypode

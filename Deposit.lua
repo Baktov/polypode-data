@@ -3,24 +3,34 @@
 local _, ns = ...
 
 -- Bouton « Ranger » de la fiche Dépôts (UI.lua) : chaque pile des sacs dont l'objet est déjà
--- dans une banque accessible (relue en direct) y est déposée, une à la fois. Destination :
--- banque du personnage (« K ») si l'objet y est, sinon banque de bataillon (« A ») s'il y est
--- et qu'elle l'accepte (objets liés au personnage refusés) ; un objet absent des banques ne
--- bouge pas. Dans la banque choisie :
---   1. sur une pile incomplète du même objet (SplitContainerItem si elle ne tient pas entière) ;
+-- dans une banque accessible (relue en direct) y est déposée, une à la fois ; un objet absent
+-- des banques ouvertes ne bouge pas. Une seule banque ouverte à la fois (voir ns.OpenBanks) :
+--   * banque du personnage (« K ») / de bataillon (« A ») : la banque du personnage si l'objet y
+--     est, sinon celle de bataillon s'il y est et qu'elle l'accepte (objets liés refusés) ;
+--   * banque de guilde (« G ») : onglets où l'on a le droit de déposer seulement.
+-- Dans la banque choisie :
+--   1. sur une pile incomplète du même objet (partage de la pile si elle ne tient pas entière) ;
 --   2. sinon dans un emplacement libre d'un onglet qui contient déjà l'objet ;
---   3. sinon dans le premier emplacement libre de cette banque ; aucun : « plus de place »,
---      les objets suivants pour cette banque sont laissés dans les sacs.
+--   3. sinon dans le premier emplacement libre de cette banque ; aucun : l'objet reste dans
+--      les sacs, « plus de place » signalé à la fin (les suivants peuvent encore compléter
+--      une pile existante).
 -- Un déplacement = prendre l'objet (curseur) puis le poser ; le suivant attend que la pile se
 -- déverrouille (réponse du serveur). Arrêt si la banque se ferme ou si une autre s'ouvre.
--- La banque de guilde n'est pas encore gérée.
+--
+-- Banque de guilde : le jeu ne tient à jour que l'onglet affiché. Avant de déposer dans un
+-- onglet, il devient l'onglet affiché (SetCurrentGuildBankTab), son contenu est redemandé au
+-- serveur (QueryGuildBankTab) et on attend la réponse (GUILDBANKBAGSLOTS_CHANGED) ; après
+-- chaque dépôt aussi. On ne pose ainsi jamais un objet sur un emplacement cru libre à tort.
 
 local STEP_INTERVAL = 0.1 -- secondes entre deux vérifications
 local STEP_TIMEOUT = 5 -- secondes d'attente au plus pour une pile (verrou, curseur)
-local KINDS = { "K", "A" } -- ordre de priorité des banques de destination
+local GUILD_WAIT = 3 -- secondes d'attente au plus d'une réponse de la banque de guilde
+local GUILD_TAB_SLOTS = 98 -- emplacements d'un onglet de banque de guilde
+local BANK_KINDS = { "K", "A" } -- ordre de priorité des banques de destination (hors guilde)
 
--- Rangement en cours : { queue, index, done, skipped, total, since, full, used, ticker } ;
--- entrées de queue { bag, slot, itemID, kind, moved }.
+-- Rangement en cours : { queue, index, done, skipped, total, since, full, used, ticker,
+-- guildWait, guildFresh, fullTabs = { ["itemID:onglet"] = true } } ; entrées de queue
+-- { bag, slot, itemID, kind, moved }.
 local run
 local status -- texte d'avancement, affiché dans la fiche Dépôts
 
@@ -67,17 +77,62 @@ function ns.OpenBanks()
 	return open
 end
 
+-- BANQUE DE GUILDE : LECTURE ------------------------------------------------------------------
+
+-- Onglets de la banque de guilde : { tab, canDeposit } pour chaque onglet visible.
+local function GuildTabs()
+	local tabs = {}
+	if not (GetNumGuildBankTabs and GetGuildBankTabInfo) then
+		return tabs
+	end
+	for tab = 1, GetNumGuildBankTabs() or 0 do
+		local _, _, isViewable, canDeposit = GetGuildBankTabInfo(tab)
+		if isViewable then
+			tabs[#tabs + 1] = { tab = tab, canDeposit = canDeposit and true or false }
+		end
+	end
+	return tabs
+end
+
+local function CanDepositInGuild()
+	for _, info in ipairs(GuildTabs()) do
+		if info.canDeposit then
+			return true
+		end
+	end
+	return false
+end
+
+-- Emplacement d'un onglet : itemID (nil = vide), nombre, verrouillé.
+local function GuildSlot(tab, slot)
+	local link = GetGuildBankItemLink(tab, slot)
+	local itemID = link and tonumber(link:match("|Hitem:(%d+)"))
+	local _, count, locked = GetGuildBankItemInfo(tab, slot)
+	return itemID, tonumber(count) or 0, locked
+end
+
+-- Objets d'un onglet : { [itemID] = true }.
+local function GuildTabItems(tab)
+	local items = {}
+	for slot = 1, GUILD_TAB_SLOTS do
+		local itemID = GuildSlot(tab, slot)
+		if itemID then
+			items[itemID] = true
+		end
+	end
+	return items
+end
+
 -- Rangement possible maintenant : true, ou false et la raison.
 function ns.CanDeposit()
 	local open = ns.OpenBanks()
 	if open.G and (open.K or open.A) then
 		return false, "Une seule banque doit être ouverte : personnage, bataillon ou guilde."
-	elseif open.G then
-		return false, "Le rangement dans la banque de guilde n'est pas encore possible : ouvrez la banque du "
-			.. "personnage ou la banque de bataillon."
-	elseif not (open.K or open.A) then
-		return false, "Ouvrez la banque du personnage ou la banque de bataillon (une seule banque ouverte : "
-			.. "personnage, bataillon ou guilde)."
+	elseif open.G and not CanDepositInGuild() then
+		return false, "Vous n'avez le droit de déposer dans aucun onglet de cette banque de guilde."
+	elseif not (open.K or open.A or open.G) then
+		return false, "Ouvrez la banque du personnage, la banque de bataillon ou la banque de guilde "
+			.. "(une seule banque ouverte à la fois)."
 	end
 	return true
 end
@@ -101,7 +156,8 @@ local function MaxStack(itemID)
 	return tonumber(size) or 1
 end
 
--- Emplacements d'une banque, dans l'ordre des onglets : { bag, slot, itemID, count, locked }.
+-- Emplacements d'une banque (K ou A), dans l'ordre des onglets : { bag, slot, itemID, count,
+-- locked }.
 local function BankSlots(kind)
 	local slots = {}
 	for _, bag in ipairs(ns.BagIDs(kind)) do
@@ -114,26 +170,28 @@ local function BankSlots(kind)
 	return slots
 end
 
--- Objet autorisé dans cette banque (objets liés au personnage refusés en bataillon...) ;
+-- Objet autorisé dans cette banque (objets liés refusés en bataillon et en guilde...) ;
 -- inconnu = oui.
+local BANK_TYPE_NAMES = { K = "Character", A = "Account", G = "Guild" }
+
 local function Allowed(kind, bag, slot)
-	if not (C_Bank and C_Bank.IsItemAllowedInBankType and Enum.BankType and ItemLocation) then
+	local bankType = Enum.BankType and Enum.BankType[BANK_TYPE_NAMES[kind]]
+	if not (bankType and C_Bank and C_Bank.IsItemAllowedInBankType and ItemLocation) then
 		return true
 	end
-	local bankType = kind == "A" and Enum.BankType.Account or Enum.BankType.Character
 	local ok, allowed = pcall(C_Bank.IsItemAllowedInBankType, bankType, ItemLocation:CreateFromBagAndSlot(bag, slot))
 	return not ok or allowed
 end
 
--- Où poser count exemplaires de itemID dans la banque kind : l'emplacement et le nombre qui y
--- tient, ou nil.
-local function FindTarget(kind, itemID, count)
-	local slots = BankSlots(kind)
+-- Place pour count exemplaires de itemID parmi slots ({ itemID, count, locked, group }) :
+-- pile incomplète du même objet, sinon emplacement libre d'un groupe (sac, onglet) qui contient
+-- l'objet, sinon premier libre. Renvoie l'emplacement et le nombre qui y tient, ou nil.
+local function PickSlot(slots, itemID, count)
 	local maxStack = MaxStack(itemID)
-	local bagsWithItem = {}
+	local groupsWithItem = {}
 	for _, target in ipairs(slots) do
 		if target.itemID == itemID then
-			bagsWithItem[target.bag] = true
+			groupsWithItem[target.group] = true
 			if not target.locked and target.count < maxStack then
 				return target, math.min(count, maxStack - target.count)
 			end
@@ -142,13 +200,50 @@ local function FindTarget(kind, itemID, count)
 	local anyFree
 	for _, target in ipairs(slots) do
 		if not target.itemID and not target.locked then
-			if bagsWithItem[target.bag] then
+			if groupsWithItem[target.group] then
 				return target, count
 			end
 			anyFree = anyFree or target
 		end
 	end
 	return anyFree, anyFree and count
+end
+
+local function FindBankTarget(kind, itemID, count)
+	local slots = BankSlots(kind)
+	for _, target in ipairs(slots) do
+		target.group = target.bag
+	end
+	return PickSlot(slots, itemID, count)
+end
+
+-- Place dans un onglet de guilde (à jour : onglet affiché, contenu reçu).
+local function FindGuildTarget(tab, itemID, count)
+	local slots = {}
+	for slot = 1, GUILD_TAB_SLOTS do
+		local slotItem, slotCount, locked = GuildSlot(tab, slot)
+		slots[slot] = { tab = tab, slot = slot, itemID = slotItem, count = slotCount, locked = locked, group = tab }
+	end
+	return PickSlot(slots, itemID, count)
+end
+
+-- Onglets de guilde où déposer itemID, dans l'ordre : ceux qui contiennent l'objet, puis les
+-- autres (droit de dépôt seulement, onglets déjà pleins exclus).
+local function GuildCandidateTabs(itemID)
+	local withItem, others = {}, {}
+	for _, info in ipairs(GuildTabs()) do
+		if info.canDeposit and not run.fullTabs[itemID .. ":" .. info.tab] then
+			if GuildTabItems(info.tab)[itemID] then
+				withItem[#withItem + 1] = info.tab
+			else
+				others[#others + 1] = info.tab
+			end
+		end
+	end
+	for _, tab in ipairs(others) do
+		withItem[#withItem + 1] = tab
+	end
+	return withItem
 end
 
 -- DÉROULEMENT --------------------------------------------------------------------------------
@@ -160,7 +255,7 @@ end
 -- « la banque », « la banque de bataillon » ou « la banque et la banque de bataillon ».
 local function BanksText(set)
 	local names = {}
-	for _, kind in ipairs(KINDS) do
+	for _, kind in ipairs({ "K", "A", "G" }) do
 		if set[kind] then
 			names[#names + 1] = "la " .. BANK_NAMES[kind]
 		end
@@ -206,40 +301,8 @@ local function NextEntry(counted)
 	Notify()
 end
 
-local function Step()
-	if not run then
-		return
-	end
-	local entry = run.queue[run.index]
-	if not entry then
-		return Finish()
-	end
-	local open = ns.OpenBanks()
-	if open.G or not open[entry.kind] then
-		return Finish("closed")
-	end
-	if CursorHasItem() then
-		return -- le joueur tient un objet : on attend qu'il le pose
-	end
-	local info = Info(entry.bag, entry.slot)
-	if not info or info.itemID ~= entry.itemID then
-		-- Pile partie : déposée par nous, ou déplacée par le joueur (comptée à part).
-		return NextEntry(entry.moved)
-	end
-	if run.full[entry.kind] then
-		return NextEntry(false) -- banque pleine : l'objet reste dans les sacs
-	end
-	if info.isLocked then
-		if GetTime() - run.since > STEP_TIMEOUT then
-			NextEntry(false)
-		end
-		return
-	end
-	local target, amount = FindTarget(entry.kind, entry.itemID, info.stackCount or 1)
-	if not target then
-		run.full[entry.kind] = true
-		return NextEntry(false)
-	end
+-- Prend la pile (ou amount exemplaires) de entry et la pose avec place() ; faux si refusé.
+local function Move(entry, info, amount, place)
 	if amount < (info.stackCount or 1) then
 		C_Container.SplitContainerItem(entry.bag, entry.slot, amount)
 	else
@@ -251,13 +314,85 @@ local function Step()
 		end
 		return
 	end
-	C_Container.PickupContainerItem(target.bag, target.slot)
+	place()
 	if CursorHasItem() then
 		ClearCursor() -- refusé par la banque : l'objet retourne dans le sac
 		return NextEntry(false)
 	end
 	entry.moved = true
 	run.since = GetTime()
+	return true
+end
+
+-- Dépôt en banque de guilde d'une pile (voir en tête de fichier).
+local function GuildStep(entry, info)
+	local count = info.stackCount or 1
+	for _, tab in ipairs(GuildCandidateTabs(entry.itemID)) do
+		if GetCurrentGuildBankTab() ~= tab or run.guildFresh ~= tab then
+			-- Onglet affiché puis relu : on attend la réponse du serveur avant d'y déposer.
+			SetCurrentGuildBankTab(tab)
+			QueryGuildBankTab(tab)
+			run.guildFresh = tab
+			run.guildWait = GetTime()
+			return
+		end
+		local target, amount = FindGuildTarget(tab, entry.itemID, count)
+		if target then
+			if Move(entry, info, amount, function()
+				PickupGuildBankItem(tab, target.slot)
+			end) then
+				run.guildWait = GetTime()
+			end
+			return
+		end
+		run.fullTabs[entry.itemID .. ":" .. tab] = true -- pas de place pour cet objet : onglet suivant
+		return
+	end
+	run.full.G = true
+	NextEntry(false)
+end
+
+local function Step()
+	if not run then
+		return
+	end
+	local entry = run.queue[run.index]
+	if not entry then
+		return Finish()
+	end
+	local open = ns.OpenBanks()
+	if (open.G and (open.K or open.A)) or not open[entry.kind] then
+		return Finish("closed")
+	end
+	if run.guildWait and GetTime() - run.guildWait < GUILD_WAIT then
+		return -- réponse de la banque de guilde attendue
+	end
+	run.guildWait = nil
+	if CursorHasItem() then
+		return -- le joueur tient un objet : on attend qu'il le pose
+	end
+	local info = Info(entry.bag, entry.slot)
+	if not info or info.itemID ~= entry.itemID then
+		-- Pile partie : déposée par nous, ou déplacée par le joueur (comptée à part).
+		return NextEntry(entry.moved)
+	end
+	if info.isLocked then
+		if GetTime() - run.since > STEP_TIMEOUT then
+			NextEntry(false)
+		end
+		return
+	end
+	if entry.kind == "G" then
+		return GuildStep(entry, info)
+	end
+	local target, amount = FindBankTarget(entry.kind, entry.itemID, info.stackCount or 1)
+	if not target then
+		run.full[entry.kind] = true
+		return NextEntry(false)
+	end
+	Move(entry, info, amount, function()
+		C_Container.PickupContainerItem(target.bag, target.slot)
+	end)
 end
 
 -- Lance le rangement : piles des sacs dont l'objet est déjà dans une banque accessible (voir
@@ -267,13 +402,22 @@ function ns.StartDeposit()
 		return
 	end
 	local open = ns.OpenBanks()
+	local kinds = open.G and { "G" } or BANK_KINDS
 	local inBank = {} -- [kind] = { [itemID] = true }
-	for _, kind in ipairs(KINDS) do
+	for _, kind in ipairs(kinds) do
 		if open[kind] then
 			inBank[kind] = {}
-			for _, target in ipairs(BankSlots(kind)) do
-				if target.itemID then
-					inBank[kind][target.itemID] = true
+			if kind == "G" then
+				for _, info in ipairs(GuildTabs()) do
+					for itemID in pairs(GuildTabItems(info.tab)) do
+						inBank.G[itemID] = true
+					end
+				end
+			else
+				for _, target in ipairs(BankSlots(kind)) do
+					if target.itemID then
+						inBank[kind][target.itemID] = true
+					end
 				end
 			end
 		end
@@ -283,7 +427,7 @@ function ns.StartDeposit()
 		for slot = 1, C_Container.GetContainerNumSlots(bag) or 0 do
 			local info = Info(bag, slot)
 			if info and info.itemID then
-				for _, kind in ipairs(KINDS) do
+				for _, kind in ipairs(kinds) do
 					if inBank[kind] and inBank[kind][info.itemID] and Allowed(kind, bag, slot) then
 						queue[#queue + 1] = { bag = bag, slot = slot, itemID = info.itemID, kind = kind }
 						break
@@ -302,7 +446,7 @@ function ns.StartDeposit()
 		return
 	end
 	run = { queue = queue, index = 1, done = 0, skipped = 0, total = #queue, since = GetTime(),
-		full = {}, used = {} }
+		full = {}, used = {}, fullTabs = {} }
 	run.ticker = C_Timer.NewTicker(STEP_INTERVAL, Step)
 	Progress()
 	Notify()
@@ -311,3 +455,14 @@ end
 function ns.StopDeposit()
 	Finish("stopped")
 end
+
+-- Contenu d'un onglet de guilde reçu : l'attente est levée.
+local events = CreateFrame("Frame")
+if not (C_EventUtils and C_EventUtils.IsEventValid) or C_EventUtils.IsEventValid("GUILDBANKBAGSLOTS_CHANGED") then
+	events:RegisterEvent("GUILDBANKBAGSLOTS_CHANGED")
+end
+events:SetScript("OnEvent", function()
+	if run and run.guildWait then
+		run.guildWait = nil
+	end
+end)

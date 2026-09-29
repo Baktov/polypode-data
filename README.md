@@ -70,9 +70,16 @@ banque ouverte, et seulement eux :
   **même onglet**, sinon ailleurs dans cette banque ;
 - un compteur suit l'avancement (« Rangement : 5 sur 30 ») jusqu'à « Les 30 objets ont été
   déposés dans la banque » (une pile des sacs compte pour un objet) ;
-- s'il n'y a plus de place dans une banque, les objets suivants pour elle restent dans les sacs
-  et c'est signalé à la fin ; le rangement s'arrête si la banque se ferme ; pendant le
-  rangement, le bouton devient **Arrêter**.
+- s'il n'y a plus de place pour un objet, il reste dans les sacs (les suivants peuvent encore
+  compléter une pile existante) et c'est signalé à la fin ; le rangement s'arrête si la banque
+  se ferme ; pendant le rangement, le bouton devient **Arrêter**.
+
+**Banque de guilde** : même fonctionnement, dans les seuls onglets où vous avez le **droit de
+déposer** (un objet présent dans un onglet sans ce droit va dans un autre onglet autorisé).
+Le jeu ne tient à jour que l'onglet affiché : avant de déposer dans un onglet, Polypode Data
+l'affiche et attend que le serveur en renvoie le contenu, puis attend sa réponse après chaque
+dépôt. C'est plus lent (environ une seconde par objet), et l'onglet affiché change pendant le
+rangement.
 
 Banques ouvertes :
 
@@ -82,8 +89,11 @@ Banques ouvertes :
 - **addon de sacs** qui remplace la fenêtre de banque (Baganator...) : l'onglet affiché n'est
   pas lisible, les deux banques sont utilisées (banque du personnage en priorité).
 
-Le bouton est grisé si aucune n'est ouverte, ou si la banque de guilde l'est aussi (une seule
-banque ouverte) : l'infobulle l'explique. Banque de guilde : à venir.
+- **banque de guilde** : la guilde.
+
+Le bouton est grisé si aucune n'est ouverte, si la banque de guilde l'est en même temps qu'une
+autre (une seule banque ouverte), ou si vous n'avez le droit de déposer dans aucun onglet de la
+banque de guilde : l'infobulle l'explique.
 
 ### Recherche d'objet
 
@@ -118,6 +128,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 
 ## Version
 
+`1.7.0` : « Ranger » dépose aussi dans la banque de guilde (onglets avec droit de dépôt).
 `1.6.0` : « Ranger » dépose aussi dans la banque de bataillon (objets qui y sont déjà ; banque du personnage en priorité).
 `1.5.1` : « Ranger » grisé quand seule la banque de bataillon est ouverte (coffre de bataillon, accès à distance).
 `1.5.0` : bouton « Ranger » (fiche Dépôts) : dépôt automatique dans la banque du personnage des objets qui y sont déjà.

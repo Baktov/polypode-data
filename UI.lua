@@ -789,15 +789,15 @@ local function DepositEntries()
 	return entries
 end
 
--- Bouton « Ranger » de la fiche des dépôts (Deposit.lua) : banque du personnage et banque de
--- bataillon ; grisé si aucune n'est ouverte ou si la banque de guilde l'est aussi (l'infobulle
--- dit pourquoi).
+-- Bouton « Ranger » de la fiche des dépôts (Deposit.lua) : banque du personnage, de bataillon
+-- ou de guilde ; grisé si aucune n'est ouverte, si la banque de guilde l'est en même temps
+-- qu'une autre, ou sans droit de dépôt en guilde (l'infobulle dit pourquoi).
 local DEPOSIT_ACTION = {
 	update = function(button, status)
 		local running = ns.IsDepositRunning()
 		button:SetText(running and "Arrêter" or "Ranger")
 		button:SetEnabled(running or (ns.CanDeposit()) or false)
-		status:SetText(ns.GetDepositStatus() or Gray("Ranger : banque du personnage ou de bataillon ouverte."))
+		status:SetText(ns.GetDepositStatus() or Gray("Ranger : ouvrez une banque (personnage, bataillon ou guilde)."))
 	end,
 	onClick = function()
 		if ns.IsDepositRunning() then
@@ -816,7 +816,8 @@ local DEPOSIT_ACTION = {
 		end
 		return { "Ranger dans la banque", "Dépose les objets des sacs qui se trouvent déjà dans une banque "
 			.. "ouverte, et seulement eux : dans la banque du personnage s'ils y sont, sinon dans la banque de "
-			.. "bataillon ; sur la pile existante, sinon dans le même onglet, sinon ailleurs dans cette banque." }
+			.. "bataillon ; ou dans la banque de guilde (onglets où vous pouvez déposer) ; sur la pile "
+			.. "existante, sinon dans le même onglet, sinon ailleurs dans cette banque." }
 	end,
 }
 
