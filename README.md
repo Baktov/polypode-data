@@ -83,12 +83,9 @@ rangement.
 
 Banques ouvertes :
 
-- **fenêtre de banque de Blizzard** : seulement celle de l'onglet affiché (« Banque du
-  personnage » ou « Bataillon ») ;
+- **chez un banquier** (fenêtre de Blizzard ou addon de sacs comme Baganator) : les deux banques,
+  quel que soit l'onglet affiché (banque du personnage en priorité) ;
 - **banque de bataillon seule** (coffre de bataillon, accès à distance) : le bataillon ;
-- **addon de sacs** qui remplace la fenêtre de banque (Baganator...) : l'onglet affiché n'est
-  pas lisible, les deux banques sont utilisées (banque du personnage en priorité).
-
 - **banque de guilde** : la guilde.
 
 Le bouton est grisé si aucune n'est ouverte, si la banque de guilde l'est en même temps qu'une
@@ -128,6 +125,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 
 ## Version
 
+`1.7.1` : « Ranger » chez un banquier : banque du personnage et de bataillon quel que soit l'onglet affiché (un objet de la banque de bataillon n'était pas rangé avec l'onglet « Banque du personnage » affiché).
 `1.7.0` : « Ranger » dépose aussi dans la banque de guilde (onglets avec droit de dépôt).
 `1.6.0` : « Ranger » dépose aussi dans la banque de bataillon (objets qui y sont déjà ; banque du personnage en priorité).
 `1.5.1` : « Ranger » grisé quand seule la banque de bataillon est ouverte (coffre de bataillon, accès à distance).

@@ -52,20 +52,13 @@ end
 
 -- Banques accessibles maintenant : K (personnage), A (bataillon), G (guilde).
 --   * banque de bataillon seule (coffre de bataillon, accès à distance : PNJ AccountBanker) : A ;
---   * fenêtre de banque de Blizzard : l'onglet affiché seulement (K ou A) ;
---   * fenêtre remplacée par un addon de sacs (Baganator...) : onglet illisible, K et A.
+--   * chez un banquier : K et A, quel que soit l'onglet affiché dans la fenêtre de banque (les
+--     deux banques sont lisibles et accessibles, comme avec un addon de sacs).
 function ns.OpenBanks()
 	local open = {}
 	if ns.IsBankOpen() then
 		if Interacting("AccountBanker") and not Interacting("Banker") and not Interacting("CharacterBanker") then
 			open.A = true
-		elseif BankFrame and BankFrame:IsShown() and BankFrame.GetActiveBankType then
-			local ok, bankType = pcall(BankFrame.GetActiveBankType, BankFrame)
-			if ok and bankType and Enum.BankType and bankType == Enum.BankType.Account then
-				open.A = true
-			else
-				open.K = true
-			end
 		else
 			open.K = true
 			open.A = Enum.BankType ~= nil and Enum.BagIndex ~= nil and Enum.BagIndex.AccountBankTab_1 ~= nil
