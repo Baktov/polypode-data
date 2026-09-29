@@ -125,6 +125,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 
 ## Version
 
+`1.7.3` : « Ranger » en banque de guilde : les objets n'étaient jamais retenus (test d'autorisation du jeu inutilisable pour la guilde) ; seuls les objets liés sont écartés.
 `1.7.2` : « Ranger » en banque de guilde : les objets des onglets non affichés sont reconnus (relevés à leur réception pendant la visite).
 `1.7.1` : « Ranger » chez un banquier : banque du personnage et de bataillon quel que soit l'onglet affiché (un objet de la banque de bataillon n'était pas rangé avec l'onglet « Banque du personnage » affiché).
 `1.7.0` : « Ranger » dépose aussi dans la banque de guilde (onglets avec droit de dépôt).

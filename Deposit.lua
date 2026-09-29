@@ -171,10 +171,21 @@ local function BankSlots(kind)
 end
 
 -- Objet autorisé dans cette banque (objets liés refusés en bataillon et en guilde...) ;
--- inconnu = oui.
-local BANK_TYPE_NAMES = { K = "Character", A = "Account", G = "Guild" }
+-- inconnu = oui. Guilde : C_Bank.IsItemAllowedInBankType n'y répond pas (tout refusé) ; on
+-- écarte les objets liés et liés au bataillon jusqu'à équipement, comme Baganator.
+local BANK_TYPE_NAMES = { K = "Character", A = "Account" }
 
-local function Allowed(kind, bag, slot)
+local function Allowed(kind, bag, slot, info)
+	if kind == "G" then
+		if info.isBound then
+			return false
+		end
+		local ok, warbound = pcall(function()
+			return C_Item.IsItemBindToAccountUntilEquip and info.hyperlink
+				and C_Item.IsItemBindToAccountUntilEquip(info.hyperlink)
+		end)
+		return not (ok and warbound)
+	end
 	local bankType = Enum.BankType and Enum.BankType[BANK_TYPE_NAMES[kind]]
 	if not (bankType and C_Bank and C_Bank.IsItemAllowedInBankType and ItemLocation) then
 		return true
@@ -428,7 +439,7 @@ function ns.StartDeposit()
 			local info = Info(bag, slot)
 			if info and info.itemID then
 				for _, kind in ipairs(kinds) do
-					if inBank[kind] and inBank[kind][info.itemID] and Allowed(kind, bag, slot) then
+					if inBank[kind] and inBank[kind][info.itemID] and Allowed(kind, bag, slot, info) then
 						queue[#queue + 1] = { bag = bag, slot = slot, itemID = info.itemID, kind = kind }
 						break
 					end
