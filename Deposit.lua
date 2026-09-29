@@ -25,14 +25,26 @@ local function Notify()
 	end
 end
 
+-- Vrai si le personnage parle à un PNJ de ce type (Enum.PlayerInteractionType[name]).
+local function Interacting(name)
+	local interactionType = Enum.PlayerInteractionType and Enum.PlayerInteractionType[name]
+	return interactionType ~= nil and C_PlayerInteractionManager ~= nil
+		and C_PlayerInteractionManager.IsInteractingWithNpcOfType ~= nil
+		and C_PlayerInteractionManager.IsInteractingWithNpcOfType(interactionType) == true
+end
+
 -- Banques ouvertes maintenant : { K = true } (personnage), { A = true } (bataillon), { G = true }
--- (guilde). La fenêtre de banque n'en montre qu'une à la fois : l'onglet affiché fait foi ;
--- fenêtre remplacée par un addon de sacs : banque du personnage.
+-- (guilde). Banque de bataillon seule (coffre de bataillon, accès à distance : PNJ
+-- AccountBanker) : A, la banque du personnage n'y est pas accessible. Sinon la fenêtre de
+-- banque n'en montre qu'une à la fois : l'onglet affiché fait foi ; fenêtre remplacée par un
+-- addon de sacs (Baganator...) : banque du personnage.
 function ns.OpenBanks()
 	local open = {}
 	if ns.IsBankOpen() then
 		local bankType
-		if BankFrame and BankFrame:IsShown() and BankFrame.GetActiveBankType then
+		if Interacting("AccountBanker") and not Interacting("Banker") and not Interacting("CharacterBanker") then
+			bankType = Enum.BankType and Enum.BankType.Account
+		elseif BankFrame and BankFrame:IsShown() and BankFrame.GetActiveBankType then
 			local ok, value = pcall(BankFrame.GetActiveBankType, BankFrame)
 			bankType = ok and value or nil
 		end
@@ -56,6 +68,9 @@ function ns.CanDeposit(kind)
 	end
 	if count > 1 then
 		return false, "Une seule banque doit être ouverte : personnage, bataillon ou guilde."
+	elseif open.A and kind == "K" then
+		return false, "C'est la banque de bataillon qui est ouverte : la banque du personnage n'est accessible "
+			.. "qu'auprès d'un banquier (onglet « Banque du personnage »)."
 	elseif not open[kind] then
 		return false, "Ouvrez la banque du personnage auprès d'un banquier (onglet « Banque du personnage ») : "
 			.. "une seule banque doit être ouverte (personnage, bataillon ou guilde)."

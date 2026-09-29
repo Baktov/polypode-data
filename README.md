@@ -71,7 +71,10 @@ banque les objets des sacs qui s'y trouvent **déjà**, et seulement eux :
   banque se ferme ; pendant le rangement, le bouton devient **Arrêter**.
 
 Le bouton est grisé si la banque du personnage n'est pas ouverte, ou si une autre banque l'est
-aussi (bataillon affiché, banque de guilde) : l'infobulle l'explique. Banque de bataillon et
+aussi (onglet bataillon affiché, banque de guilde), ou si seule la banque de bataillon est
+ouverte (coffre de bataillon, accès à distance) : l'infobulle l'explique. Avec un addon de sacs
+qui remplace la fenêtre de banque (Baganator...), l'onglet affiché n'est pas lisible : le bouton
+reste actif chez un banquier, et le rangement va toujours dans la banque du personnage. Banque de bataillon et
 banque de guilde : à venir.
 
 ### Recherche d'objet
@@ -107,6 +110,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 
 ## Version
 
+`1.5.1` : « Ranger » grisé quand seule la banque de bataillon est ouverte (coffre de bataillon, accès à distance).
 `1.5.0` : bouton « Ranger » (fiche Dépôts) : dépôt automatique dans la banque du personnage des objets qui y sont déjà.
 `1.4.1` : correctif : la déconnexion n'efface plus l'or, les métiers, l'équipement et les sacs sauvegardés (relevé fait alors que le jeu les avait déjà vidés).
 `1.4.0` : bouton « Dépôts » : objets des sacs déjà présents dans une banque, par personnage.
