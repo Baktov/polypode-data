@@ -324,6 +324,7 @@ end
 local CARD_WIDTH = 460
 local CARD_MAX_HEIGHT = 520
 local CARD_ROW_HEIGHT = 20 -- hauteur d'une ligne de P.CreateScrollList
+local CARD_STATUS_HEIGHT = 20 -- ligne d'état sous le titre (fiche avec bouton d'action)
 local DETAIL_MARK = " |cff999999»|r"
 local cards = {} -- fiches créées (réutilisées une fois fermées)
 local OpenCard -- défini plus bas
@@ -562,13 +563,28 @@ local function CharacterTooltip(key)
 	return lines
 end
 
+-- Bouton d'action et ligne d'état d'une fiche (card.action = { update(bouton, état), onClick,
+-- tooltip() → { titre, texte } }), ou masqués si elle n'en a pas.
+local function UpdateCardAction(card)
+	local action = card.action
+	card.actionButton:SetShown(action ~= nil)
+	card.statusText:SetShown(action ~= nil)
+	if action then
+		action.update(card.actionButton, card.statusText)
+	end
+end
+
 -- Remplit une fiche (titre et lignes) et ajuste sa hauteur à son contenu.
 local function FillCard(card)
 	local entries = card.build() or {}
+	local extra = card.action and CARD_STATUS_HEIGHT or 0
 	card.TitleText:SetText(card.title)
+	card.TitleText:SetPoint("RIGHT", card.action and card.actionButton or card.CloseButton, "LEFT", -4, 0)
+	card.panel:SetPoint("TOPLEFT", 8, -32 - extra)
+	UpdateCardAction(card)
 	P.SetListData(card.panel, entries)
 	card.panel.emptyText:SetText(card.empty or "Vide.")
-	card:SetHeight(math.min(CARD_MAX_HEIGHT, 40 + math.max(#entries, 1) * CARD_ROW_HEIGHT + 16))
+	card:SetHeight(math.min(CARD_MAX_HEIGHT, 40 + extra + math.max(#entries, 1) * CARD_ROW_HEIGHT + 16))
 end
 
 local function CreateCard()
@@ -594,8 +610,6 @@ local function CreateCard()
 	title:SetWordWrap(false)
 	card.TitleText = title
 
-	title:SetPoint("RIGHT", -30, 0) -- place de la croix
-
 	-- Glisser déplace la fiche ; la croix la ferme.
 	card:RegisterForDrag("LeftButton")
 	card:SetScript("OnDragStart", card.StartMoving)
@@ -604,6 +618,58 @@ local function CreateCard()
 	local closeBtn = CreateFrame("Button", nil, card, "UIPanelCloseButton")
 	closeBtn:SetPoint("TOPRIGHT", -2, -2)
 	card.CloseButton = closeBtn
+
+	-- Bouton d'action (fiche Dépôts : « Ranger ») à gauche de la croix, ligne d'état dessous ;
+	-- l'infobulle reste visible bouton grisé (elle dit pourquoi).
+	local actionBtn = CreateFrame("Button", nil, card, "UIPanelButtonTemplate")
+	actionBtn:SetSize(80, 20)
+	actionBtn:SetPoint("RIGHT", closeBtn, "LEFT", -2, 0)
+	actionBtn:SetMotionScriptsWhileDisabled(true)
+	actionBtn:SetScript("OnClick", function()
+		if card.action then
+			card.action.onClick()
+			UpdateCardAction(card)
+		end
+	end)
+	actionBtn:SetScript("OnEnter", function(self)
+		local tip = card.action and card.action.tooltip()
+		if tip then
+			GameTooltip:SetOwner(self, "ANCHOR_TOP")
+			GameTooltip:AddLine(tip[1])
+			if tip.error then
+				GameTooltip:AddLine(tip[2], 1, 0.3, 0.3, true)
+			else
+				GameTooltip:AddLine(tip[2], 1, 1, 1, true)
+			end
+			GameTooltip:Show()
+		end
+	end)
+	actionBtn:SetScript("OnLeave", GameTooltip_Hide)
+	actionBtn:Hide()
+	card.actionButton = actionBtn
+	if P.SkinButton then
+		P.SkinButton(actionBtn)
+	end
+	title:SetPoint("RIGHT", closeBtn, "LEFT", -4, 0)
+
+	local statusText = card:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	statusText:SetPoint("TOPLEFT", 12, -34)
+	statusText:SetPoint("RIGHT", -12, 0)
+	statusText:SetJustifyH("LEFT")
+	statusText:SetWordWrap(false)
+	statusText:Hide()
+	card.statusText = statusText
+
+	-- État du bouton relu régulièrement : la banque affichée (personnage / bataillon) change
+	-- sans événement.
+	local elapsedSince = 0
+	card:SetScript("OnUpdate", function(self, elapsed)
+		elapsedSince = elapsedSince + elapsed
+		if self.action and elapsedSince >= 0.25 then
+			elapsedSince = 0
+			UpdateCardAction(self)
+		end
+	end)
 
 	local panel = P.CreatePanel(card, "")
 	panel:SetPoint("TOPLEFT", 8, -32)
@@ -630,8 +696,9 @@ local function CreateCard()
 end
 
 -- Ouvre une fiche épinglée titrée title, dont build() renvoie les lignes (relu à chaque
--- rafraîchissement de la fenêtre), près du curseur, décalée des fiches déjà ouvertes.
-OpenCard = function(title, build, empty)
+-- rafraîchissement de la fenêtre), près du curseur, décalée des fiches déjà ouvertes ; empty :
+-- texte si vide ; action : bouton et ligne d'état (voir UpdateCardAction), nil = aucun.
+OpenCard = function(title, build, empty, action)
 	local card
 	for _, existing in ipairs(cards) do
 		if not existing:IsShown() then
@@ -640,7 +707,7 @@ OpenCard = function(title, build, empty)
 		end
 	end
 	card = card or CreateCard()
-	card.title, card.build, card.empty = title, build, empty
+	card.title, card.build, card.empty, card.action = title, build, empty, action
 	local scale = UIParent:GetEffectiveScale()
 	local x, y = GetCursorPosition()
 	card:ClearAllPoints()
@@ -722,6 +789,43 @@ local function DepositEntries()
 	return entries
 end
 
+-- Bouton « Ranger » de la fiche des dépôts (Deposit.lua) : banque du personnage seulement pour
+-- l'instant ; grisé si elle n'est pas la seule banque ouverte (l'infobulle dit pourquoi).
+local DEPOSIT_ACTION = {
+	update = function(button, status)
+		local running = ns.IsDepositRunning()
+		button:SetText(running and "Arrêter" or "Ranger")
+		button:SetEnabled(running or (ns.CanDeposit("K")) or false)
+		status:SetText(ns.GetDepositStatus() or Gray("Ranger : banque du personnage ouverte (seule)."))
+	end,
+	onClick = function()
+		if ns.IsDepositRunning() then
+			ns.StopDeposit()
+		else
+			ns.StartDeposit("K")
+		end
+	end,
+	tooltip = function()
+		if ns.IsDepositRunning() then
+			return { "Rangement en cours", "Clic : arrêter." }
+		end
+		local ok, reason = ns.CanDeposit("K")
+		if not ok then
+			return { "Ranger dans la banque", reason, error = true }
+		end
+		return { "Ranger dans la banque", "Dépose dans la banque du personnage les objets des sacs qui s'y "
+			.. "trouvent déjà, et seulement eux : sur la pile existante, sinon dans le même onglet, sinon "
+			.. "ailleurs dans la banque." }
+	end,
+}
+
+-- Rangement en cours : bouton et ligne d'état de la fiche des dépôts.
+function ns.UpdateDepositControls()
+	if depositCard and depositCard:IsShown() and depositCard.action == DEPOSIT_ACTION then
+		UpdateCardAction(depositCard)
+	end
+end
+
 -- Ouvre la fiche des dépôts possibles, ou la ferme si elle est ouverte.
 local function ToggleDeposits()
 	if depositCard and depositCard:IsShown() and depositCard.build == DepositEntries then
@@ -729,7 +833,7 @@ local function ToggleDeposits()
 		return
 	end
 	depositCard = OpenCard("Dépôts possibles", DepositEntries,
-		"Rien à déposer (ou banques pas encore relevées : ouvrez-les une fois).")
+		"Rien à déposer (ou banques pas encore relevées : ouvrez-les une fois).", DEPOSIT_ACTION)
 end
 
 -- RECHERCHE D'OBJETS ------------------------------------------------------------------------------

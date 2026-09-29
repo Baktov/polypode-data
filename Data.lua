@@ -144,7 +144,19 @@ local function BagIDs(kind)
 			ids[#ids + 1] = id
 		end
 	end
+	table.sort(ids) -- ordre des sacs / onglets
 	return ids
+end
+
+ns.BagIDs = BagIDs
+
+-- Banque (du personnage ou de bataillon, même fenêtre) / banque de guilde ouverte.
+function ns.IsBankOpen()
+	return bankOpen
+end
+
+function ns.IsGuildBankOpen()
+	return guildBankOpen
 end
 
 local function ReadContainers(kind)
