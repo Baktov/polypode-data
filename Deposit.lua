@@ -104,11 +104,18 @@ local function GuildSlot(tab, slot)
 	return itemID, tonumber(count) or 0, locked
 end
 
--- Objets d'un onglet : { [itemID] = true }.
+-- Objets d'un onglet : { [itemID] = true }. Seul l'onglet affiché est lisible en direct ; pour
+-- les autres, le relevé fait à leur réception pendant la visite (Data.lua) complète la lecture.
 local function GuildTabItems(tab)
 	local items = {}
 	for slot = 1, GUILD_TAB_SLOTS do
 		local itemID = GuildSlot(tab, slot)
+		if itemID then
+			items[itemID] = true
+		end
+	end
+	for key in pairs(ns.GetGuildTabItems and ns.GetGuildTabItems(tab) or {}) do
+		local itemID = tonumber(tostring(key):match("^i(%d+)$"))
 		if itemID then
 			items[itemID] = true
 		end

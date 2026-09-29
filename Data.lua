@@ -237,6 +237,12 @@ local function ScanGuildTabs()
 	end
 end
 
+-- Objets d'un onglet relevés pendant la visite ({ i<itemID> = nombre }), ou nil : le jeu ne
+-- garde lisible que l'onglet affiché, les autres ne le sont qu'à leur réception (Deposit.lua).
+function ns.GetGuildTabItems(tab)
+	return guildBankOpen and guildTabs[tab] or nil
+end
+
 function ns.ReadGuildBank()
 	if not guildBankOpen then
 		return nil
@@ -577,6 +583,8 @@ events:SetScript("OnEvent", function(_, event, ...)
 			guildBankOpen = false
 			return
 		end
+	elseif event == "GUILDBANKBAGSLOTS_CHANGED" and guildBankOpen then
+		ScanGuildTabs() -- onglet reçu relu tout de suite, avant qu'un autre ne le remplace
 	end
 	ScheduleUpdate()
 end)
