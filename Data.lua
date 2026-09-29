@@ -536,7 +536,13 @@ events:SetScript("OnEvent", function(_, event, ...)
 		end
 		RequestPlayedSilently()
 	elseif event == "PLAYER_LOGOUT" then
-		Update(false) -- dernières données sauvegardées
+		-- Pas de relevé ici : à la déconnexion, sacs, équipement, métiers et or sont déjà vidés
+		-- par le jeu (GetMoney = 0, sacs vides...) et écraseraient les données. On garde le
+		-- dernier relevé (au plus SCAN_DELAY secondes plus tôt) et on note seulement l'heure.
+		local own = Entry(P.GetCharKey())
+		if own then
+			own.seen = GetServerTime()
+		end
 		return
 	elseif event == "TIME_PLAYED_MSG" then
 		played, playedAt = ..., GetServerTime()

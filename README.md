@@ -73,7 +73,8 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 ## Fonctionnement
 
 - Chaque personnage relève ses données **2 secondes après un changement** (or, sacs, équipement,
-  niveau, zone, métiers...). La **banque** et la **banque de bataillon** ne sont lisibles que
+  niveau, zone, métiers...) ; le dernier relevé est celui qui reste sauvegardé à la déconnexion
+  (le jeu vide déjà sacs, équipement et or à ce moment-là). La **banque** et la **banque de bataillon** ne sont lisibles que
   **banque ouverte** : elles sont relevées à chaque visite, et les dernières connues restent sinon.
 - Le **temps de jeu** est demandé au serveur à la connexion, sans l'afficher dans la discussion
   (un `/played` tapé à la main s'affiche normalement).
@@ -92,6 +93,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 
 ## Version
 
+`1.4.1` : correctif : la déconnexion n'efface plus l'or, les métiers, l'équipement et les sacs sauvegardés (relevé fait alors que le jeu les avait déjà vidés).
 `1.4.0` : bouton « Dépôts » : objets des sacs déjà présents dans une banque, par personnage.
 `1.3.0` : banque de guilde (fiche, détail, recherche).
 `1.2.0` : équipement relevé avec son lien complet : enchantement, gemmes et niveau d'amélioration affichés.
