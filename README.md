@@ -60,22 +60,30 @@ Chaque objet donne le nombre dans les sacs et, en gris, celui déjà en banque ;
 son infobulle. Les banques doivent avoir été relevées (ouvertes une fois). La fiche se met à jour
 toute seule (butin, dépôt, données reçues) ; le bouton la referme.
 
-**Ranger** (en haut de la fiche) : avec la **banque du personnage** ouverte, dépose dans cette
-banque les objets des sacs qui s'y trouvent **déjà**, et seulement eux :
+**Ranger** (en haut de la fiche) : dépose les objets des sacs qui se trouvent **déjà** dans une
+banque ouverte, et seulement eux :
 
+- destination : la **banque du personnage** si l'objet y est, sinon la **banque de bataillon**
+  s'il y est (et qu'elle l'accepte : pas d'objet lié au personnage) ; un objet absent des
+  banques ouvertes ne bouge pas ;
 - sur la **pile existante** (complétée jusqu'au maximum), sinon dans un emplacement libre du
-  **même onglet**, sinon ailleurs dans la banque ;
+  **même onglet**, sinon ailleurs dans cette banque ;
 - un compteur suit l'avancement (« Rangement : 5 sur 30 ») jusqu'à « Les 30 objets ont été
   déposés dans la banque » (une pile des sacs compte pour un objet) ;
-- s'il n'y a plus de place, le rangement s'arrête et le signale ; il s'arrête aussi si la
-  banque se ferme ; pendant le rangement, le bouton devient **Arrêter**.
+- s'il n'y a plus de place dans une banque, les objets suivants pour elle restent dans les sacs
+  et c'est signalé à la fin ; le rangement s'arrête si la banque se ferme ; pendant le
+  rangement, le bouton devient **Arrêter**.
 
-Le bouton est grisé si la banque du personnage n'est pas ouverte, ou si une autre banque l'est
-aussi (onglet bataillon affiché, banque de guilde), ou si seule la banque de bataillon est
-ouverte (coffre de bataillon, accès à distance) : l'infobulle l'explique. Avec un addon de sacs
-qui remplace la fenêtre de banque (Baganator...), l'onglet affiché n'est pas lisible : le bouton
-reste actif chez un banquier, et le rangement va toujours dans la banque du personnage. Banque de bataillon et
-banque de guilde : à venir.
+Banques ouvertes :
+
+- **fenêtre de banque de Blizzard** : seulement celle de l'onglet affiché (« Banque du
+  personnage » ou « Bataillon ») ;
+- **banque de bataillon seule** (coffre de bataillon, accès à distance) : le bataillon ;
+- **addon de sacs** qui remplace la fenêtre de banque (Baganator...) : l'onglet affiché n'est
+  pas lisible, les deux banques sont utilisées (banque du personnage en priorité).
+
+Le bouton est grisé si aucune n'est ouverte, ou si la banque de guilde l'est aussi (une seule
+banque ouverte) : l'infobulle l'explique. Banque de guilde : à venir.
 
 ### Recherche d'objet
 
@@ -110,6 +118,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 
 ## Version
 
+`1.6.0` : « Ranger » dépose aussi dans la banque de bataillon (objets qui y sont déjà ; banque du personnage en priorité).
 `1.5.1` : « Ranger » grisé quand seule la banque de bataillon est ouverte (coffre de bataillon, accès à distance).
 `1.5.0` : bouton « Ranger » (fiche Dépôts) : dépôt automatique dans la banque du personnage des objets qui y sont déjà.
 `1.4.1` : correctif : la déconnexion n'efface plus l'or, les métiers, l'équipement et les sacs sauvegardés (relevé fait alors que le jeu les avait déjà vidés).

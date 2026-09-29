@@ -789,33 +789,34 @@ local function DepositEntries()
 	return entries
 end
 
--- Bouton « Ranger » de la fiche des dépôts (Deposit.lua) : banque du personnage seulement pour
--- l'instant ; grisé si elle n'est pas la seule banque ouverte (l'infobulle dit pourquoi).
+-- Bouton « Ranger » de la fiche des dépôts (Deposit.lua) : banque du personnage et banque de
+-- bataillon ; grisé si aucune n'est ouverte ou si la banque de guilde l'est aussi (l'infobulle
+-- dit pourquoi).
 local DEPOSIT_ACTION = {
 	update = function(button, status)
 		local running = ns.IsDepositRunning()
 		button:SetText(running and "Arrêter" or "Ranger")
-		button:SetEnabled(running or (ns.CanDeposit("K")) or false)
-		status:SetText(ns.GetDepositStatus() or Gray("Ranger : banque du personnage ouverte (seule)."))
+		button:SetEnabled(running or (ns.CanDeposit()) or false)
+		status:SetText(ns.GetDepositStatus() or Gray("Ranger : banque du personnage ou de bataillon ouverte."))
 	end,
 	onClick = function()
 		if ns.IsDepositRunning() then
 			ns.StopDeposit()
 		else
-			ns.StartDeposit("K")
+			ns.StartDeposit()
 		end
 	end,
 	tooltip = function()
 		if ns.IsDepositRunning() then
 			return { "Rangement en cours", "Clic : arrêter." }
 		end
-		local ok, reason = ns.CanDeposit("K")
+		local ok, reason = ns.CanDeposit()
 		if not ok then
 			return { "Ranger dans la banque", reason, error = true }
 		end
-		return { "Ranger dans la banque", "Dépose dans la banque du personnage les objets des sacs qui s'y "
-			.. "trouvent déjà, et seulement eux : sur la pile existante, sinon dans le même onglet, sinon "
-			.. "ailleurs dans la banque." }
+		return { "Ranger dans la banque", "Dépose les objets des sacs qui se trouvent déjà dans une banque "
+			.. "ouverte, et seulement eux : dans la banque du personnage s'ils y sont, sinon dans la banque de "
+			.. "bataillon ; sur la pile existante, sinon dans le même onglet, sinon ailleurs dans cette banque." }
 	end,
 }
 
