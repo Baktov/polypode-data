@@ -13,7 +13,7 @@ local P = Polypode
 -- Colonnes ancrées au bord droit, à la largeur de leur plus long contenu (mesurée à chaque
 -- rafraîchissement) ; le nom prend la place restante (comme la fenêtre de Polypode Suivi).
 
-local MIN_WIDTH, MIN_HEIGHT = 560, 220
+local MIN_WIDTH, MIN_HEIGHT = 620, 220
 local DEFAULT_WIDTH, DEFAULT_HEIGHT = 700, 360
 local COLUMN_GAP = 14
 local MIN_SEARCH = 2 -- lettres avant de lancer la recherche
@@ -567,7 +567,7 @@ local function FillCard(card)
 	local entries = card.build() or {}
 	card.TitleText:SetText(card.title)
 	P.SetListData(card.panel, entries)
-	card.panel.emptyText:SetText("Vide.")
+	card.panel.emptyText:SetText(card.empty or "Vide.")
 	card:SetHeight(math.min(CARD_MAX_HEIGHT, 40 + math.max(#entries, 1) * CARD_ROW_HEIGHT + 16))
 end
 
@@ -631,7 +631,7 @@ end
 
 -- Ouvre une fiche épinglée titrée title, dont build() renvoie les lignes (relu à chaque
 -- rafraîchissement de la fenêtre), près du curseur, décalée des fiches déjà ouvertes.
-OpenCard = function(title, build)
+OpenCard = function(title, build, empty)
 	local card
 	for _, existing in ipairs(cards) do
 		if not existing:IsShown() then
@@ -640,7 +640,7 @@ OpenCard = function(title, build)
 		end
 	end
 	card = card or CreateCard()
-	card.title, card.build = title, build
+	card.title, card.build, card.empty = title, build, empty
 	local scale = UIParent:GetEffectiveScale()
 	local x, y = GetCursorPosition()
 	card:ClearAllPoints()
@@ -648,6 +648,7 @@ OpenCard = function(title, build)
 	card:Show()
 	card:Raise()
 	FillCard(card)
+	return card
 end
 
 -- Fiches ouvertes : relues (noms d'objets arrivés, données reçues).
@@ -657,6 +658,78 @@ local function RefreshCards()
 			FillCard(card)
 		end
 	end
+end
+
+-- DÉPÔTS POSSIBLES (bouton « Dépôts » de la barre de titre) : pour chaque personnage, les objets
+-- de ses sacs qui existent déjà dans sa banque, dans la banque de bataillon de son compte ou dans
+-- la banque de guilde de sa guilde, et qui pourraient donc y être déposés. Une fiche épinglée
+-- (même fonctionnement que les autres), relue à chaque rafraîchissement.
+local depositCard
+
+local function DepositEntries()
+	local entries = {}
+	local warbands, guilds = WarbandBanks(), GuildBanks()
+	for _, item in ipairs(P.SortedKeyItems(ns.GetKeys(), IsOwn)) do
+		local key = item.key
+		local sections = Sections(key)
+		local identity = sections.I or {}
+		local warband = warbands[AccountOf(key)]
+		local guildBank = identity.gu and guilds[identity.gu]
+		local targets = {
+			{ "Banque", sections.K },
+			{ "Banque de bataillon", warband and warband.data },
+			{ "Banque de guilde" .. (identity.gu and (" (" .. identity.gu .. ")") or ""), guildBank and guildBank.data },
+		}
+		local block = {}
+		for _, target in ipairs(targets) do
+			local lines = {}
+			for itemKey, count in pairs(target[2] and sections.B or {}) do
+				local itemID = tonumber(tostring(itemKey):match("^i(%d+)$"))
+				local stored = itemID and tonumber(target[2][itemKey])
+				if stored then
+					local name, colored = ItemName(itemID)
+					lines[#lines + 1] = {
+						sort = Normalize(name or ("~" .. itemID)),
+						text = "      " .. Icon(ItemIcon(itemID)) .. " " .. (colored or ("objet n° " .. itemID))
+							.. " ×" .. count .. Gray("  (déjà " .. stored .. ")") .. DETAIL_MARK,
+						detail = function()
+							ShowItem(itemID)
+						end,
+						hint = "Clic : infobulle de l'objet",
+					}
+				end
+			end
+			if #lines > 0 then
+				table.sort(lines, function(a, b)
+					return a.sort < b.sort
+				end)
+				block[#block + 1] = { text = "   |cffffd200" .. target[1] .. "|r" }
+				for _, line in ipairs(lines) do
+					block[#block + 1] = line
+				end
+			end
+		end
+		if #block > 0 then
+			if #entries > 0 then
+				entries[#entries + 1] = { text = " " }
+			end
+			entries[#entries + 1] = { text = CharacterName(key) }
+			for _, line in ipairs(block) do
+				entries[#entries + 1] = line
+			end
+		end
+	end
+	return entries
+end
+
+-- Ouvre la fiche des dépôts possibles, ou la ferme si elle est ouverte.
+local function ToggleDeposits()
+	if depositCard and depositCard:IsShown() and depositCard.build == DepositEntries then
+		depositCard:Hide()
+		return
+	end
+	depositCard = OpenCard("Dépôts possibles", DepositEntries,
+		"Rien à déposer (ou banques pas encore relevées : ouvrez-les une fois).")
 end
 
 -- RECHERCHE D'OBJETS ------------------------------------------------------------------------------
@@ -883,9 +956,24 @@ local function Build()
 	frame:Hide()
 	tinsert(UISpecialFrames, "PolypodeDataFrame") -- Échap ferme la fenêtre
 
-	-- Titre à gauche : le champ de recherche occupe la droite de la barre de titre.
+	-- Bouton « Dépôts » à gauche, puis le titre ; le champ de recherche occupe la droite.
+	local depositBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+	depositBtn:SetSize(70, 20)
+	depositBtn:SetPoint("TOPLEFT", 6, -3)
+	depositBtn:SetText("Dépôts")
+	depositBtn:SetScript("OnClick", ToggleDeposits)
+	depositBtn:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:AddLine("Dépôts possibles")
+		GameTooltip:AddLine("Pour chaque personnage, les objets de ses sacs qui existent déjà dans sa banque, "
+			.. "la banque de bataillon ou la banque de guilde, et qui pourraient y être déposés.", 1, 1, 1, true)
+		GameTooltip:Show()
+	end)
+	depositBtn:SetScript("OnLeave", GameTooltip_Hide)
+	P.ui.dataDepositButton = depositBtn
+
 	local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-	title:SetPoint("TOPLEFT", 14, -12)
+	title:SetPoint("LEFT", depositBtn, "RIGHT", 10, 0)
 	title:SetText("Données des personnages")
 	frame.TitleText = title
 
@@ -993,6 +1081,9 @@ local function Build()
 
 	P.SkinFrame(frame)
 	P.SkinPanel(listPanel)
+	if P.SkinButton then
+		P.SkinButton(depositBtn)
+	end
 end
 
 -- Remplit la liste, si la fenêtre est ouverte.

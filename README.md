@@ -46,6 +46,20 @@ redimensionnable (poignée du coin bas-droit ; Échap ferme) :
   Dans une fiche de sac, un clic sur un objet affiche aussi son infobulle ;
 - **clic droit** sur un personnage : « Oublier ce personnage » (personnage supprimé, renommé...).
 
+### Dépôts possibles
+
+Le bouton **Dépôts** (à gauche de la barre de titre) ouvre une fiche (déplaçable, croix pour la
+fermer) qui liste, **pour chaque personnage**, les objets de ses **sacs** qui existent **déjà**
+dans l'une de ses trois banques, et qui pourraient donc y être rangés :
+
+- **Banque** (la sienne) ;
+- **Banque de bataillon** (celle de son compte Battle.net) ;
+- **Banque de guilde** (celle de sa guilde).
+
+Chaque objet donne le nombre dans les sacs et, en gris, celui déjà en banque ; un clic affiche
+son infobulle. Les banques doivent avoir été relevées (ouvertes une fois). La fiche se met à jour
+toute seule (butin, dépôt, données reçues) ; le bouton la referme.
+
 ### Recherche d'objet
 
 Le champ **Rechercher un objet** (en haut à droite) : dès 2 lettres, la liste devient celle des
@@ -78,6 +92,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 
 ## Version
 
+`1.4.0` : bouton « Dépôts » : objets des sacs déjà présents dans une banque, par personnage.
 `1.3.0` : banque de guilde (fiche, détail, recherche).
 `1.2.0` : équipement relevé avec son lien complet : enchantement, gemmes et niveau d'amélioration affichés.
 `1.1.1` : fiches fermées par une croix, détail ouvert par un clic.
