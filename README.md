@@ -70,7 +70,8 @@ Chaque objet donne le nombre dans les sacs et, en gris, celui déjà en banque ;
 son infobulle. Les banques doivent avoir été relevées (ouvertes une fois). La fiche se met à jour
 toute seule (butin, dépôt, données reçues) ; le bouton la referme.
 
-**Ranger** (en haut de la fiche) : dépose les objets des sacs qui se trouvent **déjà** dans une
+**Ranger** (en haut de la fiche, et aussi dans la barre de titre de la fenêtre, entre **Dépôts** et
+l'icône du sac : même bouton, même fonction) : dépose les objets des sacs qui se trouvent **déjà** dans une
 banque ouverte, et seulement eux :
 
 - destination : la **banque du personnage** si l'objet y est, sinon la **banque de bataillon**
@@ -135,6 +136,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 
 ## Version
 
+`1.8.2` : bouton « Ranger » aussi dans la barre de titre, entre « Dépôts » et l'icône du sac.
 `1.8.1` : les quatre boutons deviennent des icônes (fenêtre de nouveau large de 620 au minimum).
 `1.8.0` : boutons Sacs, Banque, Bataillon et Guilde du personnage joué (nombre d'objets au survol, contenu au clic).
 `1.7.3` : « Ranger » en banque de guilde : les objets n'étaient jamais retenus (test d'autorisation du jeu inutilisable pour la guilde) ; seuls les objets liés sont écartés.

@@ -895,11 +895,35 @@ local DEPOSIT_ACTION = {
 	end,
 }
 
--- Rangement en cours : bouton et ligne d'état de la fiche des dépôts.
+-- Bouton « Ranger » de l'en-tête de la fenêtre : même action que celui de la fiche Dépôts, sans
+-- ligne d'état (NO_STATUS).
+local rangerButton
+local NO_STATUS = { SetText = function() end }
+
+local function UpdateRangerButton()
+	if rangerButton and rangerButton:IsVisible() then
+		DEPOSIT_ACTION.update(rangerButton, NO_STATUS)
+	end
+end
+
+local function ShowDepositTooltip(owner, anchor)
+	local tip = DEPOSIT_ACTION.tooltip()
+	GameTooltip:SetOwner(owner, anchor)
+	GameTooltip:AddLine(tip[1])
+	if tip.error then
+		GameTooltip:AddLine(tip[2], 1, 0.3, 0.3, true)
+	else
+		GameTooltip:AddLine(tip[2], 1, 1, 1, true)
+	end
+	GameTooltip:Show()
+end
+
+-- Rangement en cours : bouton et ligne d'état de la fiche des dépôts, bouton de l'en-tête.
 function ns.UpdateDepositControls()
 	if depositCard and depositCard:IsShown() and depositCard.action == DEPOSIT_ACTION then
 		UpdateCardAction(depositCard)
 	end
+	UpdateRangerButton()
 end
 
 -- Ouvre la fiche des dépôts possibles, ou la ferme si elle est ouverte.
@@ -1152,9 +1176,35 @@ local function Build()
 	depositBtn:SetScript("OnLeave", GameTooltip_Hide)
 	P.ui.dataDepositButton = depositBtn
 
+	-- « Ranger » : la même action que le bouton de la fiche Dépôts (qui le garde aussi) ; état relu
+	-- toutes les 0,25 s (la banque ouverte change sans événement), infobulle visible grisé.
+	rangerButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+	rangerButton:SetSize(70, 20)
+	rangerButton:SetPoint("LEFT", depositBtn, "RIGHT", 4, 0)
+	rangerButton:SetText("Ranger")
+	rangerButton:SetMotionScriptsWhileDisabled(true)
+	rangerButton:SetScript("OnClick", function()
+		DEPOSIT_ACTION.onClick()
+		ns.UpdateDepositControls()
+	end)
+	rangerButton:SetScript("OnEnter", function(self)
+		ShowDepositTooltip(self, "ANCHOR_BOTTOM")
+	end)
+	rangerButton:SetScript("OnLeave", GameTooltip_Hide)
+	local sinceUpdate = 0
+	rangerButton:SetScript("OnUpdate", function(_, elapsed)
+		sinceUpdate = sinceUpdate + elapsed
+		if sinceUpdate >= 0.25 then
+			sinceUpdate = 0
+			UpdateRangerButton()
+		end
+	end)
+	rangerButton:SetScript("OnShow", UpdateRangerButton)
+	P.ui.dataRangerButton = rangerButton
+
 	-- Sacs, banque, banque de bataillon, banque de guilde du personnage joué (icônes) : infobulle =
 	-- nombre d'objets (et différents), clic = fiche du contenu.
-	local previous = depositBtn
+	local previous = rangerButton
 	local containerButtons = {}
 	for index, spec in ipairs(OWN_CONTAINERS) do
 		local button = CreateFrame("Button", nil, frame)
@@ -1301,6 +1351,7 @@ local function Build()
 	P.SkinPanel(listPanel)
 	if P.SkinButton then
 		P.SkinButton(depositBtn) -- les icônes gardent leur image
+		P.SkinButton(rangerButton)
 	end
 end
 
