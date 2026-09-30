@@ -637,8 +637,24 @@ local function CharacterTooltip(key)
 	return lines
 end
 
+-- Infobulle d'un bouton d'action : titre en jaune, résumé (summary) en bleu clair, puis le texte
+-- (rouge si error : pourquoi le bouton est grisé).
+local function ShowActionTooltip(owner, anchor, tip)
+	GameTooltip:SetOwner(owner, anchor)
+	GameTooltip:AddLine(tip[1], 1, 0.82, 0)
+	if tip.summary then
+		GameTooltip:AddLine(tip.summary, 0.4, 0.8, 1, true)
+	end
+	if tip.error then
+		GameTooltip:AddLine(tip[2], 1, 0.3, 0.3, true)
+	else
+		GameTooltip:AddLine(tip[2], 1, 1, 1, true)
+	end
+	GameTooltip:Show()
+end
+
 -- Bouton d'action et ligne d'état d'une fiche (card.action = { update(bouton, état), onClick,
--- tooltip() → { titre, texte } }), ou masqués si elle n'en a pas.
+-- tooltip() → { titre, texte, summary, error } }), ou masqués si elle n'en a pas.
 local function UpdateCardAction(card)
 	local action = card.action
 	card.actionButton:SetShown(action ~= nil)
@@ -708,14 +724,7 @@ local function CreateCard()
 	actionBtn:SetScript("OnEnter", function(self)
 		local tip = card.action and card.action.tooltip()
 		if tip then
-			GameTooltip:SetOwner(self, "ANCHOR_TOP")
-			GameTooltip:AddLine(tip[1])
-			if tip.error then
-				GameTooltip:AddLine(tip[2], 1, 0.3, 0.3, true)
-			else
-				GameTooltip:AddLine(tip[2], 1, 1, 1, true)
-			end
-			GameTooltip:Show()
+			ShowActionTooltip(self, "ANCHOR_TOP", tip)
 		end
 	end)
 	actionBtn:SetScript("OnLeave", GameTooltip_Hide)
@@ -881,14 +890,15 @@ local DEPOSIT_ACTION = {
 		end
 	end,
 	tooltip = function()
+		local summary = "Tout objet des sacs qui existe déjà dans une banque y est rangé."
 		if ns.IsDepositRunning() then
-			return { "Rangement en cours", "Clic : arrêter." }
+			return { "Rangement en cours", "Clic : arrêter.", summary = summary }
 		end
 		local ok, reason = ns.CanDeposit()
 		if not ok then
-			return { "Ranger dans la banque", reason, error = true }
+			return { "Ranger dans la banque", reason, summary = summary, error = true }
 		end
-		return { "Ranger dans la banque", "Dépose les objets des sacs qui se trouvent déjà dans une banque "
+		return { "Ranger dans la banque", summary = summary, "Dépose les objets des sacs qui se trouvent déjà dans une banque "
 			.. "ouverte, et seulement eux : dans la banque du personnage s'ils y sont, sinon dans la banque de "
 			.. "bataillon ; ou dans la banque de guilde (onglets où vous pouvez déposer) ; sur la pile "
 			.. "existante, sinon dans le même onglet, sinon ailleurs dans cette banque." }
@@ -907,15 +917,7 @@ local function UpdateRangerButton()
 end
 
 local function ShowDepositTooltip(owner, anchor)
-	local tip = DEPOSIT_ACTION.tooltip()
-	GameTooltip:SetOwner(owner, anchor)
-	GameTooltip:AddLine(tip[1])
-	if tip.error then
-		GameTooltip:AddLine(tip[2], 1, 0.3, 0.3, true)
-	else
-		GameTooltip:AddLine(tip[2], 1, 1, 1, true)
-	end
-	GameTooltip:Show()
+	ShowActionTooltip(owner, anchor, DEPOSIT_ACTION.tooltip())
 end
 
 -- Rangement en cours : bouton et ligne d'état de la fiche des dépôts, bouton de l'en-tête.

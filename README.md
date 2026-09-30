@@ -136,6 +136,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 
 ## Version
 
+`1.8.3` : infobulle de « Ranger » : titre en jaune, résumé en bleu (« tout objet des sacs qui existe déjà dans une banque y est rangé »), puis le détail (en rouge si le bouton est grisé).
 `1.8.2` : bouton « Ranger » aussi dans la barre de titre, entre « Dépôts » et l'icône du sac.
 `1.8.1` : les quatre boutons deviennent des icônes (fenêtre de nouveau large de 620 au minimum).
 `1.8.0` : boutons Sacs, Banque, Bataillon et Guilde du personnage joué (nombre d'objets au survol, contenu au clic).
