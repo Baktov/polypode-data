@@ -13,8 +13,8 @@ local P = Polypode
 -- Colonnes ancrées au bord droit, à la largeur de leur plus long contenu (mesurée à chaque
 -- rafraîchissement) ; le nom prend la place restante (comme la fenêtre de Polypode Suivi).
 
-local MIN_WIDTH, MIN_HEIGHT = 620, 220
-local DEFAULT_WIDTH, DEFAULT_HEIGHT = 700, 360
+local MIN_WIDTH, MIN_HEIGHT = 720, 220 -- largeur : boutons de l'en-tête + champ de recherche
+local DEFAULT_WIDTH, DEFAULT_HEIGHT = 820, 360
 local COLUMN_GAP = 14
 local MIN_SEARCH = 2 -- lettres avant de lancer la recherche
 
@@ -549,6 +549,78 @@ local function CharacterEntries(key)
 	return entries
 end
 
+-- SACS ET BANQUES DU PERSONNAGE JOUÉ (boutons de l'en-tête) ----------------------------------
+-- B sacs, K banque, A banque de bataillon de son compte, G banque de guilde de sa guilde : les
+-- mêmes fiches que le détail d'un personnage (ContainerEntries), avec le dernier relevé.
+local OWN_CONTAINERS = {
+	{ code = "B", label = "Sacs", width = 50 },
+	{ code = "K", label = "Banque", width = 60 },
+	{ code = "A", label = "Bataillon", width = 70 },
+	{ code = "G", label = "Guilde", width = 60 },
+}
+
+-- { title, data, version, missing } d'un sac / d'une banque du personnage joué.
+local function OwnContainer(code)
+	local key = P.GetCharKey()
+	local sections, entry = Sections(key)
+	if code == "B" or code == "K" then
+		return {
+			title = (code == "B" and "Sacs" or "Banque") .. " de " .. P.GetDisplayName(key),
+			data = sections[code],
+			version = entry and tonumber(entry.t[code]),
+			missing = code == "K" and "Banque pas encore relevée : ouvrez-la une fois avec ce personnage."
+				or "Sacs pas encore relevés.",
+		}
+	elseif code == "A" then
+		local bank = WarbandBanks()[AccountOf(key)]
+		return {
+			title = "Banque de bataillon",
+			data = bank and bank.data,
+			version = bank and bank.version,
+			missing = "Banque de bataillon pas encore relevée : ouvrez une fois une banque.",
+		}
+	end
+	local guild = (sections.I or {}).gu
+	local bank = guild and GuildBanks()[guild]
+	return {
+		title = guild and ("Banque de guilde " .. guild) or "Banque de guilde",
+		data = bank and bank.data,
+		version = bank and bank.version,
+		missing = guild and "Banque de guilde pas encore relevée : ouvrez-la une fois (avec un personnage de la guilde)."
+			or "Ce personnage n'a pas de guilde.",
+	}
+end
+
+-- Infobulle d'un bouton : nombre d'objets, d'objets différents, date du relevé.
+local function OwnContainerTooltip(owner, code)
+	local container = OwnContainer(code)
+	GameTooltip:SetOwner(owner, "ANCHOR_BOTTOM")
+	GameTooltip:AddLine(container.title)
+	if container.data then
+		local total, distinct = ContainerCount(container.data)
+		GameTooltip:AddLine(total .. " objets (" .. distinct .. " différents)", 1, 1, 1)
+		local money = code == "G" and tonumber(container.data.m)
+		if money then
+			GameTooltip:AddLine(FormatGold(money), 1, 1, 1)
+		end
+		if container.version then
+			GameTooltip:AddLine("Relevé " .. FormatWhen(container.version), 0.6, 0.6, 0.6)
+		end
+		GameTooltip:AddLine("Clic : contenu détaillé", 0.6, 0.6, 0.6)
+	else
+		GameTooltip:AddLine(container.missing, 0.6, 0.6, 0.6, true)
+	end
+	GameTooltip:Show()
+end
+
+-- Clic : fiche épinglée du contenu (relue à chaque rafraîchissement).
+local function OpenOwnContainer(code)
+	local container = OwnContainer(code)
+	OpenCard(container.title, function()
+		return ContainerEntries(OwnContainer(code).data)
+	end, container.missing)
+end
+
 -- Infobulle au survol d'un personnage : ses lignes de détail, et les actions.
 local function CharacterTooltip(key)
 	local lines = { CharacterName(key) .. Gray("  " .. key) }
@@ -1078,8 +1150,31 @@ local function Build()
 	depositBtn:SetScript("OnLeave", GameTooltip_Hide)
 	P.ui.dataDepositButton = depositBtn
 
+	-- Sacs, banque, banque de bataillon, banque de guilde du personnage joué : infobulle = nombre
+	-- d'objets (et différents), clic = fiche du contenu.
+	local previous = depositBtn
+	local containerButtons = {}
+	for _, spec in ipairs(OWN_CONTAINERS) do
+		local button = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+		button:SetSize(spec.width, 20)
+		button:SetPoint("LEFT", previous, "RIGHT", 4, 0)
+		button:SetText(spec.label)
+		button:SetScript("OnClick", function()
+			OpenOwnContainer(spec.code)
+		end)
+		button:SetScript("OnEnter", function(self)
+			OwnContainerTooltip(self, spec.code)
+		end)
+		button:SetScript("OnLeave", GameTooltip_Hide)
+		containerButtons[#containerButtons + 1] = button
+		previous = button
+	end
+	P.ui.dataContainerButtons = containerButtons
+
 	local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-	title:SetPoint("LEFT", depositBtn, "RIGHT", 10, 0)
+	title:SetPoint("LEFT", previous, "RIGHT", 10, 0)
+	title:SetJustifyH("LEFT")
+	title:SetWordWrap(false) -- tronqué si la fenêtre est étroite
 	title:SetText("Données des personnages")
 	frame.TitleText = title
 
@@ -1090,6 +1185,7 @@ local function Build()
 	searchBox = CreateFrame("EditBox", nil, frame, "SearchBoxTemplate")
 	searchBox:SetSize(200, 20)
 	searchBox:SetPoint("RIGHT", closeBtn, "LEFT", -8, 0)
+	title:SetPoint("RIGHT", searchBox, "LEFT", -12, 0)
 	searchBox:SetAutoFocus(false)
 	if searchBox.Instructions then
 		searchBox.Instructions:SetText("Rechercher un objet")
@@ -1189,6 +1285,9 @@ local function Build()
 	P.SkinPanel(listPanel)
 	if P.SkinButton then
 		P.SkinButton(depositBtn)
+		for _, button in ipairs(containerButtons) do
+			P.SkinButton(button)
+		end
 	end
 end
 

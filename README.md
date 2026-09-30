@@ -46,6 +46,15 @@ redimensionnable (poignée du coin bas-droit ; Échap ferme) :
   Dans une fiche de sac, un clic sur un objet affiche aussi son infobulle ;
 - **clic droit** sur un personnage : « Oublier ce personnage » (personnage supprimé, renommé...).
 
+### Sacs et banques du personnage joué
+
+À droite du bouton **Dépôts**, quatre boutons : **Sacs**, **Banque**, **Bataillon** (banque de
+bataillon du compte) et **Guilde** (banque de guilde de sa guilde). Au survol : le nombre
+d'objets, le nombre d'objets différents (et l'or de la banque de guilde) et la date du relevé ;
+au clic : la fiche du contenu, la même que depuis le détail du personnage. Une banque jamais
+ouverte avec ce personnage (ou un personnage de la guilde) n'est pas encore relevée : l'infobulle
+l'indique.
+
 ### Dépôts possibles
 
 Le bouton **Dépôts** (à gauche de la barre de titre) ouvre une fiche (déplaçable, croix pour la
@@ -125,6 +134,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 
 ## Version
 
+`1.8.0` : boutons Sacs, Banque, Bataillon et Guilde du personnage joué (nombre d'objets au survol, contenu au clic).
 `1.7.3` : « Ranger » en banque de guilde : les objets n'étaient jamais retenus (test d'autorisation du jeu inutilisable pour la guilde) ; seuls les objets liés sont écartés.
 `1.7.2` : « Ranger » en banque de guilde : les objets des onglets non affichés sont reconnus (relevés à leur réception pendant la visite).
 `1.7.1` : « Ranger » chez un banquier : banque du personnage et de bataillon quel que soit l'onglet affiché (un objet de la banque de bataillon n'était pas rangé avec l'onglet « Banque du personnage » affiché).
