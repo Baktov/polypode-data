@@ -309,6 +309,25 @@ function ns.Forget(key)
 	end
 end
 
+-- Personnage supprimé dans Polypode (Maj + clic dans « Personnages disponibles », ou sur un
+-- autre client) : ses données relevées sont oubliées ici aussi (Polypode 0.53.0).
+if P.RegisterCharacterData then
+	P.RegisterCharacterData({
+		name = "Polypode Data",
+		describe = function(key)
+			if store and store[key] then
+				return "niveau, or, métiers, équipement, sacs et banques relevés"
+			end
+		end,
+		remove = function(key)
+			ns.Forget(key)
+			if ns.Refresh then
+				ns.Refresh()
+			end
+		end,
+	})
+end
+
 -- SYNCHRO ----------------------------------------------------------------------------------
 
 local changed = {} -- sections du personnage joué modifiées depuis le dernier envoi
