@@ -416,13 +416,16 @@ local function ContainerEntries(data)
 	return entries
 end
 
--- Lignes du détail d'un personnage (infobulle au survol et fiche épinglée).
-local function CharacterEntries(key)
+-- Lignes du détail d'un personnage (infobulle au survol et fiche épinglée). Une ligne peut avoir
+-- une colonne de droite (right : métiers deux par ligne). noEquipment : sans la liste de
+-- l'équipement (fiche épinglée : il y est montré en icônes, voir ÉQUIPEMENT EN ICÔNES).
+local function CharacterEntries(key, noEquipment)
 	local sections, entry = Sections(key)
 	local identity = sections.I or {}
 	local entries = {}
-	local function Add(text, detail, hint)
-		entries[#entries + 1] = { text = detail and (text .. DETAIL_MARK) or text, detail = detail, hint = hint }
+	local function Add(text, detail, hint, right)
+		entries[#entries + 1] = { text = detail and (text .. DETAIL_MARK) or text, detail = detail, hint = hint,
+			right = right }
 	end
 	local className = identity.c and LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[identity.c]
 	local who = {}
@@ -459,12 +462,17 @@ local function CharacterEntries(key)
 	if #professions > 0 then
 		Add(" ")
 		Add("|cffffd200Métiers|r")
-		for _, profession in ipairs(professions) do
-			Add("  " .. Icon(profession.icon) .. " " .. profession.name .. " : " .. profession.level .. "/" .. profession.max)
+		-- Deux colonnes : principaux côte à côte, puis secondaires deux par deux.
+		local function ProfessionText(profession)
+			return Icon(profession.icon) .. " " .. profession.name .. " : " .. profession.level .. "/" .. profession.max
+		end
+		for i = 1, #professions, 2 do
+			local second = professions[i + 1]
+			Add("  " .. ProfessionText(professions[i]), nil, nil, second and ProfessionText(second) or nil)
 		end
 	end
 
-	if sections.E then
+	if sections.E and not noEquipment then
 		Add(" ")
 		Add("|cffffd200Équipement|r")
 		for slot, global in ipairs(SLOT_NAMES) do
@@ -627,7 +635,13 @@ end
 local function CharacterTooltip(key)
 	local lines = { CharacterName(key) .. Gray("  " .. key) }
 	for _, entry in ipairs(CharacterEntries(key)) do
-		lines[#lines + 1] = entry.text
+		if entry.right and P.LIST_TOOLTIP_COLUMNS then
+			lines[#lines + 1] = { entry.text, entry.right } -- deux colonnes (Polypode 0.51.4)
+		elseif entry.right then
+			lines[#lines + 1] = entry.text .. "     " .. entry.right
+		else
+			lines[#lines + 1] = entry.text
+		end
 	end
 	lines[#lines + 1] = " "
 	lines[#lines + 1] = Gray("Clic gauche : épingler cette fiche (déplaçable, plusieurs possibles)")
@@ -664,17 +678,136 @@ local function UpdateCardAction(card)
 	end
 end
 
+-- ÉQUIPEMENT EN ICÔNES (fiche épinglée d'un personnage) : disposition de la fenêtre de
+-- personnage de WoW, 8 emplacements à gauche, 8 à droite, les armes en bas ; la liste des autres
+-- informations au milieu. Infobulle de l'objet (enchantement, gemmes, améliorations) au survol,
+-- clic = infobulle épinglée (ShowItem). Emplacement vide : fond d'emplacement de Blizzard.
+local GEAR_LEFT = { 1, 2, 3, 15, 5, 4, 19, 9 } -- tête, cou, épaules, dos, torse, chemise, tabard, poignets
+local GEAR_RIGHT = { 10, 6, 7, 8, 11, 12, 13, 14 } -- mains, taille, jambes, pieds, anneaux, bijoux
+local GEAR_BOTTOM = { 16, 17 } -- main droite, main gauche
+local GEAR_ICON, GEAR_GAP, GEAR_MARGIN = 34, 4, 10
+local GEAR_COLUMN_HEIGHT = #GEAR_LEFT * (GEAR_ICON + GEAR_GAP) - GEAR_GAP
+
+local function CreateGearButton(parent, slot)
+	local button = CreateFrame("Button", nil, parent)
+	button:SetSize(GEAR_ICON, GEAR_ICON)
+	button.slot = slot
+	button.icon = button:CreateTexture(nil, "ARTWORK")
+	button.icon:SetAllPoints()
+	button.border = button:CreateTexture(nil, "OVERLAY")
+	button.border:SetTexture("Interface\\Common\\WhiteIconFrame")
+	button.border:SetAllPoints()
+	button.level = button:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
+	button.level:SetPoint("BOTTOMRIGHT", -2, 2)
+	button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+	button:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		if self.link then
+			GameTooltip:SetHyperlink(self.link)
+		else
+			GameTooltip:AddLine(_G[SLOT_NAMES[self.slot]] or ("Emplacement " .. self.slot))
+			GameTooltip:AddLine("Vide", 0.6, 0.6, 0.6)
+		end
+		GameTooltip:Show()
+	end)
+	button:SetScript("OnLeave", GameTooltip_Hide)
+	button:SetScript("OnClick", function(self)
+		if self.link then
+			ShowItem(self.link)
+		end
+	end)
+	return button
+end
+
+-- Crée (une fois) les emplacements d'une fiche.
+local function EnsureGear(card)
+	if card.gear then
+		return card.gear
+	end
+	local gear = {}
+	for index, slot in ipairs(GEAR_LEFT) do
+		local button = CreateGearButton(card, slot)
+		button:SetPoint("TOPLEFT", GEAR_MARGIN, -32 - (index - 1) * (GEAR_ICON + GEAR_GAP))
+		gear[slot] = button
+	end
+	for index, slot in ipairs(GEAR_RIGHT) do
+		local button = CreateGearButton(card, slot)
+		button:SetPoint("TOPRIGHT", -GEAR_MARGIN, -32 - (index - 1) * (GEAR_ICON + GEAR_GAP))
+		gear[slot] = button
+	end
+	for index, slot in ipairs(GEAR_BOTTOM) do
+		local button = CreateGearButton(card, slot)
+		local offset = (index == 1 and -1 or 1) * (GEAR_ICON + GEAR_GAP) / 2
+		button:SetPoint("BOTTOM", card, "BOTTOM", offset, GEAR_MARGIN)
+		gear[slot] = button
+	end
+	card.gear = gear
+	return gear
+end
+
+-- Remplit les emplacements d'après l'équipement relevé du personnage key (nil = masqués).
+local function FillGear(card, key)
+	local equipment = key and Sections(key).E
+	if not key then
+		if card.gear then
+			for _, button in pairs(card.gear) do
+				button:Hide()
+			end
+		end
+		return
+	end
+	for slot, button in pairs(EnsureGear(card)) do
+		local itemID, level, link = EquippedItem(equipment and equipment[tostring(slot)])
+		button.link = itemID and link or nil
+		if itemID then
+			ItemName(itemID) -- demande l'objet au serveur s'il n'est pas connu (qualité, icône)
+			button.icon:SetTexture(ItemIcon(itemID) or 134400) -- point d'interrogation à défaut
+			button.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+			button.icon:SetDesaturated(false)
+			local quality = C_Item and C_Item.GetItemQualityByID and C_Item.GetItemQualityByID(link)
+			local color = quality and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality]
+			button.border:SetShown(color ~= nil)
+			if color then
+				button.border:SetVertexColor(color.r, color.g, color.b)
+			end
+			button.level:SetText((level or 0) > 0 and level or "")
+		else
+			local getSlotInfo = C_PaperDollInfo and C_PaperDollInfo.GetInventorySlotInfo or GetInventorySlotInfo
+			local _, emptyTexture = getSlotInfo(SLOT_NAMES[slot])
+			button.icon:SetTexture(emptyTexture)
+			button.icon:SetTexCoord(0, 1, 0, 1)
+			button.icon:SetDesaturated(true)
+			button.border:Hide()
+			button.level:SetText("")
+		end
+		button:Show()
+	end
+end
+
 -- Remplit une fiche (titre et lignes) et ajuste sa hauteur à son contenu.
 local function FillCard(card)
 	local entries = card.build() or {}
 	local extra = card.action and CARD_STATUS_HEIGHT or 0
 	card.TitleText:SetText(card.title)
 	card.TitleText:SetPoint("RIGHT", card.action and card.actionButton or card.CloseButton, "LEFT", -4, 0)
-	card.panel:SetPoint("TOPLEFT", 8, -32 - extra)
+	local listHeight = math.max(#entries, 1) * CARD_ROW_HEIGHT + 16
+	card.panel:ClearAllPoints()
+	FillGear(card, card.gearKey)
+	if card.gearKey then
+		-- Liste entre les deux colonnes d'emplacements, armes dessous.
+		local side = GEAR_MARGIN + GEAR_ICON + 6
+		card.panel:SetPoint("TOPLEFT", side, -32 - extra)
+		card.panel:SetPoint("BOTTOMRIGHT", -side, GEAR_MARGIN + GEAR_ICON + 6)
+		card:SetHeight(40 + extra + math.max(GEAR_COLUMN_HEIGHT, math.min(listHeight, CARD_MAX_HEIGHT - 40))
+			+ GEAR_ICON + GEAR_MARGIN)
+	else
+		card.panel:SetPoint("TOPLEFT", 8, -32 - extra)
+		card.panel:SetPoint("BOTTOMRIGHT", -8, 8)
+		card:SetHeight(math.min(CARD_MAX_HEIGHT, 40 + extra + listHeight))
+	end
 	UpdateCardAction(card)
 	P.SetListData(card.panel, entries)
 	card.panel.emptyText:SetText(card.empty or "Vide.")
-	card:SetHeight(math.min(CARD_MAX_HEIGHT, 40 + extra + math.max(#entries, 1) * CARD_ROW_HEIGHT + 16))
 end
 
 local function CreateCard()
@@ -771,6 +904,20 @@ local function CreateCard()
 		tooltip = function(data)
 			return data.hint and { data.hint } or nil
 		end,
+		-- Colonne de droite (data.right) dans la moitié droite de la ligne.
+		decorate = function(row, data)
+			if not row.rightText then
+				row.rightText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+				row.rightText:SetPoint("LEFT", row, "CENTER", 4, 0)
+				row.rightText:SetPoint("RIGHT", -4, 0)
+				row.rightText:SetJustifyH("LEFT")
+				row.rightText:SetWordWrap(false)
+			end
+			row.rightText:SetText(data.right or "")
+			row.rightText:SetShown(data.right ~= nil)
+			row.text:SetPoint("RIGHT", data.right and row.rightText or row, data.right and "LEFT" or "RIGHT",
+				data.right and -4 or -4, 0)
+		end,
 	})
 	card.panel = panel
 	P.SkinFrame(card)
@@ -781,7 +928,7 @@ end
 -- Ouvre une fiche épinglée titrée title, dont build() renvoie les lignes (relu à chaque
 -- rafraîchissement de la fenêtre), près du curseur, décalée des fiches déjà ouvertes ; empty :
 -- texte si vide ; action : bouton et ligne d'état (voir UpdateCardAction), nil = aucun.
-OpenCard = function(title, build, empty, action)
+OpenCard = function(title, build, empty, action, gearKey)
 	local card
 	for _, existing in ipairs(cards) do
 		if not existing:IsShown() then
@@ -790,7 +937,7 @@ OpenCard = function(title, build, empty, action)
 		end
 	end
 	card = card or CreateCard()
-	card.title, card.build, card.empty, card.action = title, build, empty, action
+	card.title, card.build, card.empty, card.action, card.gearKey = title, build, empty, action, gearKey
 	local scale = UIParent:GetEffectiveScale()
 	local x, y = GetCursorPosition()
 	card:ClearAllPoints()
@@ -1309,8 +1456,8 @@ local function Build()
 			else
 				local key = data.key
 				OpenCard(CharacterName(key), function()
-					return CharacterEntries(key)
-				end)
+					return CharacterEntries(key, true)
+				end, nil, nil, key)
 			end
 		end,
 		tooltip = function(data)
