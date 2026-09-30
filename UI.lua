@@ -13,8 +13,8 @@ local P = Polypode
 -- Colonnes ancrées au bord droit, à la largeur de leur plus long contenu (mesurée à chaque
 -- rafraîchissement) ; le nom prend la place restante (comme la fenêtre de Polypode Suivi).
 
-local MIN_WIDTH, MIN_HEIGHT = 720, 220 -- largeur : boutons de l'en-tête + champ de recherche
-local DEFAULT_WIDTH, DEFAULT_HEIGHT = 820, 360
+local MIN_WIDTH, MIN_HEIGHT = 620, 220
+local DEFAULT_WIDTH, DEFAULT_HEIGHT = 700, 360
 local COLUMN_GAP = 14
 local MIN_SEARCH = 2 -- lettres avant de lancer la recherche
 
@@ -552,12 +552,14 @@ end
 -- SACS ET BANQUES DU PERSONNAGE JOUÉ (boutons de l'en-tête) ----------------------------------
 -- B sacs, K banque, A banque de bataillon de son compte, G banque de guilde de sa guilde : les
 -- mêmes fiches que le détail d'un personnage (ContainerEntries), avec le dernier relevé.
+-- Icônes (utilisées par l'interface de Blizzard) : texture, ou atlas pour le bataillon.
 local OWN_CONTAINERS = {
-	{ code = "B", label = "Sacs", width = 50 },
-	{ code = "K", label = "Banque", width = 60 },
-	{ code = "A", label = "Bataillon", width = 70 },
-	{ code = "G", label = "Guilde", width = 60 },
+	{ code = "B", texture = "Interface\\Icons\\INV_Misc_Bag_08" },
+	{ code = "K", texture = "Interface\\Icons\\INV_Misc_Coin_02" },
+	{ code = "A", atlas = "warbands-icon", texture = "Interface\\Icons\\INV_Misc_Coin_17" },
+	{ code = "G", texture = "Interface\\Icons\\achievement_guildperk_mobilebanking" },
 }
+local CONTAINER_ICON_SIZE = 20
 
 -- { title, data, version, missing } d'un sac / d'une banque du personnage joué.
 local function OwnContainer(code)
@@ -1150,15 +1152,29 @@ local function Build()
 	depositBtn:SetScript("OnLeave", GameTooltip_Hide)
 	P.ui.dataDepositButton = depositBtn
 
-	-- Sacs, banque, banque de bataillon, banque de guilde du personnage joué : infobulle = nombre
-	-- d'objets (et différents), clic = fiche du contenu.
+	-- Sacs, banque, banque de bataillon, banque de guilde du personnage joué (icônes) : infobulle =
+	-- nombre d'objets (et différents), clic = fiche du contenu.
 	local previous = depositBtn
 	local containerButtons = {}
-	for _, spec in ipairs(OWN_CONTAINERS) do
-		local button = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		button:SetSize(spec.width, 20)
-		button:SetPoint("LEFT", previous, "RIGHT", 4, 0)
-		button:SetText(spec.label)
+	for index, spec in ipairs(OWN_CONTAINERS) do
+		local button = CreateFrame("Button", nil, frame)
+		button:SetSize(CONTAINER_ICON_SIZE, CONTAINER_ICON_SIZE)
+		button:SetPoint("LEFT", previous, "RIGHT", index == 1 and 8 or 4, 0)
+		local icon = button:CreateTexture(nil, "ARTWORK")
+		icon:SetAllPoints()
+		if spec.atlas and C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(spec.atlas) then
+			icon:SetAtlas(spec.atlas)
+		else
+			icon:SetTexture(spec.texture)
+			icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) -- sans le liseré des icônes
+		end
+		button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+		button:SetScript("OnMouseDown", function()
+			icon:SetPoint("TOPLEFT", 1, -1) -- léger enfoncement au clic
+		end)
+		button:SetScript("OnMouseUp", function()
+			icon:SetAllPoints()
+		end)
 		button:SetScript("OnClick", function()
 			OpenOwnContainer(spec.code)
 		end)
@@ -1284,10 +1300,7 @@ local function Build()
 	P.SkinFrame(frame)
 	P.SkinPanel(listPanel)
 	if P.SkinButton then
-		P.SkinButton(depositBtn)
-		for _, button in ipairs(containerButtons) do
-			P.SkinButton(button)
-		end
+		P.SkinButton(depositBtn) -- les icônes gardent leur image
 	end
 end
 

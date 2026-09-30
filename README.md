@@ -48,8 +48,9 @@ redimensionnable (poignée du coin bas-droit ; Échap ferme) :
 
 ### Sacs et banques du personnage joué
 
-À droite du bouton **Dépôts**, quatre boutons : **Sacs**, **Banque**, **Bataillon** (banque de
-bataillon du compte) et **Guilde** (banque de guilde de sa guilde). Au survol : le nombre
+À droite du bouton **Dépôts**, quatre icônes : **sac** (sacs), **pièces d'or** (banque du
+personnage), **emblème du bataillon** (banque de bataillon du compte) et **coffre de guilde**
+(banque de guilde de sa guilde). Au survol : le nombre
 d'objets, le nombre d'objets différents (et l'or de la banque de guilde) et la date du relevé ;
 au clic : la fiche du contenu, la même que depuis le détail du personnage. Une banque jamais
 ouverte avec ce personnage (ou un personnage de la guilde) n'est pas encore relevée : l'infobulle
@@ -134,6 +135,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 
 ## Version
 
+`1.8.1` : les quatre boutons deviennent des icônes (fenêtre de nouveau large de 620 au minimum).
 `1.8.0` : boutons Sacs, Banque, Bataillon et Guilde du personnage joué (nombre d'objets au survol, contenu au clic).
 `1.7.3` : « Ranger » en banque de guilde : les objets n'étaient jamais retenus (test d'autorisation du jeu inutilisable pour la guilde) ; seuls les objets liés sont écartés.
 `1.7.2` : « Ranger » en banque de guilde : les objets des onglets non affichés sont reconnus (relevés à leur réception pendant la visite).
