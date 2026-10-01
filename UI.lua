@@ -156,8 +156,12 @@ local function Professions(key)
 		if value then
 			local skillLine, level, maxLevel, icon, name = tostring(value):match("^(%d+)/(%d+)/(%d+)/([^/]*)/(.*)$")
 			if skillLine then
-				list[#list + 1] = { slot = slot, level = tonumber(level), max = tonumber(maxLevel),
-					icon = tonumber(icon) or icon, name = name }
+				local gear = {}
+				for gearSlot in tostring(professions["g" .. slot] or ""):gmatch("%d+") do
+					gear[#gear + 1] = tonumber(gearSlot)
+				end
+				list[#list + 1] = { slot = slot, skillLine = tonumber(skillLine), level = tonumber(level),
+					max = tonumber(maxLevel), icon = tonumber(icon) or icon, name = name, gear = gear }
 			end
 		end
 	end
@@ -411,6 +415,135 @@ local function ContainerEntries(data)
 	return entries
 end
 
+-- FICHE D'UN MÉTIER (clic sur un métier dans la fiche d'un personnage) : ses objets (outil,
+-- accessoires : section E, emplacements notés g<métier> dans T), puis ses recettes apprises
+-- (section R, relevée fenêtre du métier ouverte) par extension, repliables (repliées par défaut,
+-- la plus récente en tête). Nom et icône d'une recette : ceux de son sort (recipeID = spellID).
+local expandedTiers = {} -- ["clé#métier d'extension"] = true : extension dépliée (session)
+
+local function SpellName(spellID)
+	local name = C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(spellID)
+	if not name and C_Spell and C_Spell.RequestLoadSpellData then
+		C_Spell.RequestLoadSpellData(spellID)
+		namesPending = true -- SPELL_DATA_LOAD_RESULT relance l'affichage
+	end
+	return name
+end
+
+local function ShowSpell(spellID)
+	if type(SetItemRef) == "function" then
+		SetItemRef("spell:" .. spellID, nil, "LeftButton")
+	end
+end
+
+local function ProfessionEntries(key, professionSlot)
+	local sections = Sections(key)
+	local entries = {}
+	local function Add(text, detail, hint, noMark)
+		entries[#entries + 1] = { text = (detail and not noMark) and (text .. DETAIL_MARK) or text, detail = detail,
+			hint = hint }
+	end
+	local profession
+	for _, candidate in ipairs(Professions(key)) do
+		if candidate.slot == professionSlot then
+			profession = candidate
+		end
+	end
+	if not profession then
+		Add(Gray("Métier inconnu (plus relevé pour ce personnage)."))
+		return entries
+	end
+
+	Add("|cffffd200Objets de métier|r")
+	local anyItem = false
+	for _, slot in ipairs(profession.gear) do
+		local itemID, level, link = EquippedItem(sections.E and sections.E[tostring(slot)])
+		if itemID then
+			anyItem = true
+			local _, colored = ItemName(itemID)
+			Add("  " .. Icon(ItemIcon(itemID)) .. " " .. (colored or ("objet n° " .. itemID))
+				.. ((level or 0) > 0 and Gray(" " .. level) or ""), function()
+				ShowItem(link)
+			end, "Clic : infobulle de l'objet")
+		end
+	end
+	if not anyItem then
+		Add("  " .. Gray(#profession.gear > 0 and "Aucun objet équipé."
+			or "Pas encore relevés : reconnectez une fois ce personnage."))
+	end
+
+	-- Recettes de ce métier, regroupées par métier d'extension.
+	local tiers, count = {}, 0
+	local recipes = sections.R or {}
+	for itemKey, value in pairs(recipes) do
+		local child = tonumber(tostring(itemKey):match("^c(%d+)$") or "")
+		local base, label = tostring(value):match("^(%d+)/(.*)$")
+		if child and tonumber(base) == profession.skillLine then
+			tiers[child] = { child = child, label = label ~= "" and label or ("n° " .. child), ids = {} }
+		end
+	end
+	for itemKey, value in pairs(recipes) do
+		local recipeID = tonumber(tostring(itemKey):match("^r(%d+)$") or "")
+		local tier = recipeID and tiers[tonumber(value)]
+		if tier then
+			tier.ids[#tier.ids + 1] = recipeID
+			count = count + 1
+		end
+	end
+	Add(" ")
+	Add("|cffffd200Recettes apprises|r" .. Gray(" (" .. count .. ")"))
+	if count == 0 then
+		Add("  " .. Gray("Pas encore relevées : ouvrez une fois la fenêtre de ce métier avec ce personnage."))
+		return entries
+	end
+	local order = {}
+	for _, tier in pairs(tiers) do
+		if #tier.ids > 0 then
+			order[#order + 1] = tier
+		end
+	end
+	table.sort(order, function(a, b)
+		return a.child > b.child -- extension la plus récente en tête
+	end)
+	for _, tier in ipairs(order) do
+		local stateKey = key .. "#" .. tier.child
+		local open = expandedTiers[stateKey]
+		Add("|cffffd200" .. (open and "-" or "+") .. "|r " .. tier.label .. Gray(" (" .. #tier.ids .. ")"), function()
+			expandedTiers[stateKey] = not open or nil
+			ns.Refresh()
+		end, "Clic : " .. (open and "replier" or "déplier"), true)
+		if open then
+			local rows = {}
+			for _, recipeID in ipairs(tier.ids) do
+				rows[#rows + 1] = { id = recipeID, name = SpellName(recipeID) or ("recette n° " .. recipeID) }
+			end
+			table.sort(rows, function(a, b)
+				return Normalize(a.name) < Normalize(b.name)
+			end)
+			for _, row in ipairs(rows) do
+				local icon = C_Spell and C_Spell.GetSpellTexture and C_Spell.GetSpellTexture(row.id)
+				Add("      " .. Icon(icon) .. " " .. row.name, function()
+					ShowSpell(row.id)
+				end, "Clic : infobulle de la recette")
+			end
+		end
+	end
+	return entries
+end
+
+-- Ouvre la fiche d'un métier d'un personnage.
+local function OpenProfessionCard(key, professionSlot)
+	local name = professionSlot
+	for _, candidate in ipairs(Professions(key)) do
+		if candidate.slot == professionSlot then
+			name = candidate.name
+		end
+	end
+	OpenCard(name .. " — " .. CharacterName(key), function()
+		return ProfessionEntries(key, professionSlot)
+	end)
+end
+
 -- Lignes du détail d'un personnage (infobulle au survol et fiche épinglée). Une ligne peut avoir
 -- une colonne de droite (right : métiers deux par ligne). noEquipment : sans la liste de
 -- l'équipement (fiche épinglée : il y est montré en icônes, voir ÉQUIPEMENT EN ICÔNES).
@@ -418,9 +551,9 @@ local function CharacterEntries(key, noEquipment)
 	local sections, entry = Sections(key)
 	local identity = sections.I or {}
 	local entries = {}
-	local function Add(text, detail, hint, right)
+	local function Add(text, detail, hint, right, rightDetail)
 		entries[#entries + 1] = { text = detail and (text .. DETAIL_MARK) or text, detail = detail, hint = hint,
-			right = right }
+			right = right and rightDetail and (right .. DETAIL_MARK) or right, rightDetail = rightDetail }
 	end
 	local className = identity.c and LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[identity.c]
 	local who = {}
@@ -461,9 +594,15 @@ local function CharacterEntries(key, noEquipment)
 		local function ProfessionText(profession)
 			return Icon(profession.icon) .. " " .. profession.name .. " : " .. profession.level .. "/" .. profession.max
 		end
+		-- Chaque métier ouvre sa fiche (objets, recettes) ; celui de droite par sa propre zone.
+		local hint = "Clic : objets et recettes de ce métier"
 		for i = 1, #professions, 2 do
-			local second = professions[i + 1]
-			Add("  " .. ProfessionText(professions[i]), nil, nil, second and ProfessionText(second) or nil)
+			local first, second = professions[i], professions[i + 1]
+			Add("  " .. ProfessionText(first), function()
+				OpenProfessionCard(key, first.slot)
+			end, hint, second and ProfessionText(second) or nil, second and function()
+				OpenProfessionCard(key, second.slot)
+			end or nil)
 		end
 	end
 
@@ -939,6 +1078,29 @@ local function CreateCard()
 			end
 			row.rightText:SetText(data.right or "")
 			row.rightText:SetShown(data.right ~= nil)
+			-- Zone cliquable de la colonne de droite (rightDetail : le second métier de la ligne).
+			if not row.rightButton then
+				row.rightButton = CreateFrame("Button", nil, row)
+				row.rightButton:SetPoint("TOPLEFT", row, "TOP", 0, 0)
+				row.rightButton:SetPoint("BOTTOMRIGHT")
+				row.rightButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+				local highlight = row.rightButton:CreateTexture(nil, "HIGHLIGHT")
+				highlight:SetAllPoints()
+				highlight:SetColorTexture(1, 1, 1, 0.08)
+				row.rightButton:SetScript("OnClick", function(self)
+					local current = self:GetParent().data
+					if current and current.rightDetail then
+						current.rightDetail()
+					end
+				end)
+				row.rightButton:SetScript("OnEnter", function(self)
+					GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+					GameTooltip:AddLine("Clic : objets et recettes de ce métier", 1, 1, 1)
+					GameTooltip:Show()
+				end)
+				row.rightButton:SetScript("OnLeave", GameTooltip_Hide)
+			end
+			row.rightButton:SetShown(data.rightDetail ~= nil)
 			row.text:SetPoint("RIGHT", data.right and row.rightText or row, data.right and "LEFT" or "RIGHT",
 				data.right and -4 or -4, 0)
 		end,
@@ -1590,8 +1752,10 @@ end
 -- Noms d'objets reçus du serveur : la recherche en cours est relancée (regroupé).
 local refreshPending
 local itemEvents = CreateFrame("Frame")
-if not (C_EventUtils and C_EventUtils.IsEventValid) or C_EventUtils.IsEventValid("ITEM_DATA_LOAD_RESULT") then
-	itemEvents:RegisterEvent("ITEM_DATA_LOAD_RESULT")
+for _, event in ipairs({ "ITEM_DATA_LOAD_RESULT", "SPELL_DATA_LOAD_RESULT" }) do -- noms d'objets / de recettes
+	if not (C_EventUtils and C_EventUtils.IsEventValid) or C_EventUtils.IsEventValid(event) then
+		itemEvents:RegisterEvent(event)
+	end
 end
 itemEvents:SetScript("OnEvent", function()
 	if refreshPending or not namesPending then

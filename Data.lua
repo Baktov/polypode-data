@@ -16,6 +16,9 @@ local P = Polypode -- dépendance obligatoire (## Dependencies: Polypode), charg
 --     « itemID:enchantement:gemmes...:bonus... », sans « item: » : enchantement, gemmes et
 --     améliorations compris ; les « : » passent, seuls « , » et « = » séparent) ;
 --   B sacs, K banque du personnage, A banque de bataillon : i<itemID> = nombre.
+--   R recettes apprises (fenêtre du métier ouverte) : r<recipeID> = métier d'extension,
+--     c<métier d'extension> = « métier de base/extension » (voir RECETTES APPRISES) ;
+--   T contient aussi g<p1...> = emplacements des objets du métier (section E, 20 et plus).
 --   G banque de guilde (relevée par ce personnage) : n nom de la guilde, m or (cuivre), i<itemID>.
 -- K, A et G ne sont lisibles que banque ouverte : sinon les dernières connues restent. Le nom de
 -- la guilde du personnage est dans I (gu).
@@ -31,13 +34,14 @@ local P = Polypode -- dépendance obligatoire (## Dependencies: Polypode), charg
 --   DATA:token:clé:section:flag:version:k=v,k=v,... — une section (flag N premier fragment,
 --     + suite), en réponse à DATAREQ, et aux clients connectés 10 s après un changement.
 
-ns.SECTIONS = { "I", "T", "E", "B", "K", "A", "G" }
+ns.SECTIONS = { "I", "T", "E", "B", "K", "A", "G", "R" }
 
 local SCAN_DELAY = 2 -- secondes : regroupe les rafales d'événements (sacs, or)
 local SEND_DELAY = 10 -- secondes : envoi des sections modifiées aux clients connectés
 
 local store -- PolypodeDataDB.chars
 local bankOpen = false
+local tradeSkillOpen = false -- fenêtre d'un métier ouverte (TRADE_SKILL_SHOW / CLOSE)
 local guildBankOpen = false
 local GUILD_TAB_SLOTS = 98 -- emplacements d'un onglet de banque de guilde
 local guildTabs = {} -- [onglet] = { i<itemID> = nombre }, onglets relevés pendant cette visite
@@ -99,6 +103,14 @@ local function ReadProfessions()
 			local name, icon, level, maxLevel, _, _, skillLine = GetProfessionInfo(index)
 			if name then
 				data[key] = table.concat({ skillLine or 0, level or 0, maxLevel or 0, icon or 0, Clean(name) }, "/")
+				-- g<clé> = emplacements de ses objets (outil, accessoires), « 20/21/22 » : propres au
+				-- personnage (premier / second métier principal), lus dans la section E.
+				local ui = C_TradeSkillUI or {}
+				local okInfo, info = pcall(ui.GetProfessionInfoBySkillLineID, skillLine)
+				local okSlots, slots = pcall(ui.GetProfessionSlots, okInfo and info and info.profession)
+				if okSlots and type(slots) == "table" and #slots > 0 then
+					data["g" .. key] = table.concat(slots, "/")
+				end
 			end
 		end
 	end
@@ -107,7 +119,16 @@ end
 
 local function ReadEquipment()
 	local data = {}
+	local slots = {}
 	for slot = 1, 19 do
+		slots[#slots + 1] = slot
+	end
+	-- Objets de métier (outils, accessoires) : emplacements 20 et plus.
+	local okProf, profSlots = pcall(C_TradeSkillUI and C_TradeSkillUI.GetProfessionInventorySlots)
+	for _, slot in ipairs(okProf and type(profSlots) == "table" and profSlots or {}) do
+		slots[#slots + 1] = slot
+	end
+	for _, slot in ipairs(slots) do
 		local itemID = GetInventoryItemID("player", slot)
 		if itemID then
 			local link = GetInventoryItemLink("player", slot)
@@ -189,6 +210,60 @@ local function ReadContainers(kind)
 	return data
 end
 
+-- RECETTES APPRISES (section R) : lisibles seulement fenêtre du métier ouverte, pour un métier du
+-- personnage joué (pas un lien de recettes, une guilde ni une commande d'artisanat). Clés :
+--   r<recipeID> = métier d'extension de la recette (« Alchimie de Khaz Algar » : professionID) ;
+--   c<métier d'extension> = « métier de base/nom de l'extension » (base = skillLine de la section T).
+-- Les métiers d'extension relus remplacent leurs anciennes entrées ; ceux des autres métiers (ou
+-- non relus) sont gardés. Nom et icône d'une recette : ceux de son sort (recipeID = spellID).
+local function ReadRecipes()
+	local ui = C_TradeSkillUI
+	if not (tradeSkillOpen and ui and ui.GetBaseProfessionInfo and ui.GetAllRecipeIDs and ui.GetRecipeInfo
+		and ui.GetProfessionInfoByRecipeID) then
+		return nil
+	end
+	local function Is(fn)
+		return fn and select(2, pcall(fn)) == true
+	end
+	if Is(ui.IsTradeSkillLinked) or Is(ui.IsTradeSkillGuild) or Is(ui.IsTradeSkillGuildMember)
+		or Is(ui.IsNPCCrafting) or Is(ui.IsRuneforging) then
+		return nil
+	end
+	local base = ui.GetBaseProfessionInfo()
+	local baseLine = base and base.professionID
+	local ids = ui.GetAllRecipeIDs()
+	if not baseLine or baseLine == 0 or type(ids) ~= "table" or #ids == 0 then
+		return nil
+	end
+	local fresh, lines = {}, {}
+	for _, recipeID in ipairs(ids) do
+		local info = ui.GetRecipeInfo(recipeID)
+		if info and info.learned then
+			local prof = ui.GetProfessionInfoByRecipeID(recipeID)
+			local child = prof and prof.professionID
+			if child and child ~= 0 then
+				fresh["r" .. recipeID] = child
+				if not lines[child] then
+					lines[child] = true
+					local label = prof.expansionName ~= "" and prof.expansionName or prof.professionName
+					fresh["c" .. child] = baseLine .. "/" .. Clean(label)
+				end
+			end
+		end
+	end
+	if not next(lines) then
+		return nil -- rien d'appris lisible (données pas encore chargées) : on garde l'ancien
+	end
+	local own = store and store[P.GetCharKey()]
+	for key, value in pairs(own and own.s.R or {}) do
+		local child = key:match("^c(%d+)$") or (key:match("^r%d+$") and value)
+		if child and not lines[tonumber(child)] then
+			fresh[key] = value
+		end
+	end
+	return fresh
+end
+
 -- Lecteurs par section ; nil = rien de lisible maintenant (banque fermée), on garde l'ancien.
 local READERS = {
 	I = ReadIdentity,
@@ -206,6 +281,7 @@ local READERS = {
 	G = function()
 		return ns.ReadGuildBank()
 	end,
+	R = ReadRecipes,
 }
 
 -- BANQUE DE GUILDE : à l'ouverture, tous les onglets visibles sont demandés au serveur
@@ -665,6 +741,7 @@ for _, event in ipairs({
 	"PLAYER_ACCOUNT_BANK_TAB_SLOTS_CHANGED", "BANK_TABS_CHANGED", "TIME_PLAYED_MSG",
 	"PLAYER_INTERACTION_MANAGER_FRAME_SHOW", "PLAYER_INTERACTION_MANAGER_FRAME_HIDE", -- banque de guilde
 	"GUILDBANKBAGSLOTS_CHANGED", "GUILDBANK_UPDATE_MONEY", "PLAYER_GUILD_UPDATE",
+	"TRADE_SKILL_SHOW", "TRADE_SKILL_CLOSE", "TRADE_SKILL_LIST_UPDATE", "TRADE_SKILL_DATA_SOURCE_CHANGED", -- recettes
 }) do
 	if not (C_EventUtils and C_EventUtils.IsEventValid) or C_EventUtils.IsEventValid(event) then
 		pcall(events.RegisterEvent, events, event)
@@ -717,6 +794,12 @@ events:SetScript("OnEvent", function(_, event, ...)
 			guildBankOpen = false
 			return
 		end
+	elseif event == "TRADE_SKILL_SHOW" then
+		tradeSkillOpen = true
+	elseif event == "TRADE_SKILL_CLOSE" then
+		Update() -- dernier relevé des recettes, puis fermeture
+		tradeSkillOpen = false
+		return
 	elseif event == "GUILDBANKBAGSLOTS_CHANGED" and guildBankOpen then
 		ScanGuildTabs() -- onglet reçu relu tout de suite, avant qu'un autre ne le remplace
 	end

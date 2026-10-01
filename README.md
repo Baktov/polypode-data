@@ -63,6 +63,22 @@ La banque de bataillon appartient à un **compte Battle.net**, la banque de guil
 quel que soit le personnage qui l'ouvre, Polypode Data n'en garde **qu'un relevé** (le plus récent
 remplace les autres, jamais cumulés).
 
+### Métiers d'un personnage
+
+Dans la fiche épinglée d'un personnage, **chaque métier est cliquable** (y compris celui de la
+colonne de droite) : il ouvre une fiche avec
+
+1. les **objets de métier** équipés (outil, accessoires), avec leur infobulle au clic ;
+2. les **recettes apprises**, regroupées **par extension** (« Khaz Algar », « Îles aux Dragons »...,
+   la plus récente en tête), chaque extension **repliable / dépliable** d'un clic (repliées par
+   défaut) ; un clic sur une recette ouvre son infobulle.
+
+WoW ne donne les recettes que **fenêtre du métier ouverte** : ouvrez une fois chaque métier avec
+chaque personnage pour les relever (seuls vos propres métiers sont relevés, pas le lien de recettes
+d'un autre joueur ni une commande d'artisanat). Les objets de métier sont relevés avec
+l'équipement (reconnectez une fois le personnage après cette mise à jour). Comme le reste, ces
+données sont partagées avec vos autres clients connectés.
+
 ### Dépôts possibles
 
 Le bouton **Dépôts** (à gauche de la barre de titre) ouvre une fiche (déplaçable, croix pour la
@@ -145,6 +161,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 ## Version
 
 `1.9.1` : personnage supprimé dans Polypode (Maj + clic) : ses données relevées sont oubliées, ici et sur les autres clients connectés.
+`1.11.0` : métiers cliquables dans la fiche d'un personnage : objets de métier et recettes apprises par extension (relevées fenêtre du métier ouverte).
 `1.10.4` : une seule fiche par personnage : un clic gauche sur un personnage dont la fiche est déjà ouverte la ramène au premier plan.
 `1.10.3` : « Ranger » sans objet éligible : « Tous les objets ont déjà été déposés dans … », affiché aussi à l'écran.
 `1.10.2` : clic droit sur le bouton « Data » (fenêtre Polypode et colonne de la barre flottante) : ranger, comme le bouton « Ranger ».
