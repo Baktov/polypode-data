@@ -9,7 +9,7 @@ local P = Polypode -- dépendance obligatoire (## Dependencies: Polypode), charg
 --
 -- Sections (une table { clé = valeur } chacune ; valeurs sans « , : = ») :
 --   I identité : c classe (fichier), r race, l niveau, i niveau d'objet équipé, s spécialisation,
---     ap points de haut fait,
+--     ap points de haut fait du personnage (hauts faits qu'il a lui-même obtenus),
 --     f faction, g or (pièces de cuivre), z zone, p temps de jeu (s) relevé à la date pa ;
 --   T métiers : p1 / p2 principaux, s1 / s2 / s3 archéologie, pêche, cuisine =
 --     « skillLine/niveau/max/icône/nom » ;
@@ -63,6 +63,45 @@ end
 
 -- LECTURE DU PERSONNAGE JOUÉ ----------------------------------------------------------------
 
+-- POINTS DE HAUT FAIT DU PERSONNAGE : GetTotalAchievementPoints compte ceux du bataillon (compte) ;
+-- on additionne ceux des hauts faits obtenus par ce personnage (GetAchievementInfo : 13e valeur,
+-- « gagné par moi » ; hauts faits de guilde exclus), chaînes comprises (étapes précédentes par
+-- GetPreviousAchievement, que la liste ne montre pas). Calcul coûteux : refait seulement à la
+-- connexion et à chaque haut fait obtenu (achievementPointsDirty), sinon la valeur gardée.
+local achievementPoints
+local achievementPointsDirty = true
+
+local function CharacterAchievementPoints()
+	if not achievementPointsDirty then
+		return achievementPoints
+	end
+	if not (GetCategoryList and GetCategoryNumAchievements and GetAchievementInfo) then
+		return nil
+	end
+	local seen, total = {}, 0
+	local function Count(id)
+		while id and not seen[id] do
+			seen[id] = true
+			local _, _, points, _, _, _, _, _, _, _, _, isGuild, earnedByMe = GetAchievementInfo(id)
+			if earnedByMe and not isGuild then
+				total = total + (tonumber(points) or 0)
+			end
+			id = GetPreviousAchievement and GetPreviousAchievement(id)
+		end
+	end
+	for _, category in ipairs(GetCategoryList() or {}) do
+		for index = 1, GetCategoryNumAchievements(category, true) or 0 do
+			Count((GetAchievementInfo(category, index)))
+		end
+	end
+	achievementPoints, achievementPointsDirty = total, false
+	return total
+end
+
+function ns.MarkAchievementPointsDirty()
+	achievementPointsDirty = true
+end
+
 local function ReadIdentity()
 	local data = {}
 	local _, classFile = UnitClass("player")
@@ -85,8 +124,8 @@ local function ReadIdentity()
 	local guild = GetGuildInfo and GetGuildInfo("player")
 	data.gu = guild and Clean(guild) or nil
 	data.p, data.pa = played, playedAt
-	-- Points de haut fait (communs aux personnages d'un même compte).
-	local okPoints, points = pcall(GetTotalAchievementPoints)
+	-- Points de haut fait de ce personnage (pas ceux du bataillon).
+	local okPoints, points = pcall(CharacterAchievementPoints)
 	data.ap = okPoints and tonumber(points) or nil
 	return data
 end
@@ -798,6 +837,8 @@ events:SetScript("OnEvent", function(_, event, ...)
 			guildBankOpen = false
 			return
 		end
+	elseif event == "ACHIEVEMENT_EARNED" then
+		ns.MarkAchievementPointsDirty() -- recompté au prochain relevé
 	elseif event == "TRADE_SKILL_SHOW" then
 		tradeSkillOpen = true
 	elseif event == "TRADE_SKILL_CLOSE" then

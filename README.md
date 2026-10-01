@@ -171,6 +171,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 ## Version
 
 `1.9.1` : personnage supprimé dans Polypode (Maj + clic) : ses données relevées sont oubliées, ici et sur les autres clients connectés.
+`1.13.1` : colonne « Hauts faits » : points des hauts faits obtenus par le personnage lui-même (et non plus le total du bataillon).
 `1.13.0` : colonnes du tableau à partir de 40 % de la largeur de la fenêtre (recollées au bord droit si elle est trop étroite) ; colonne « Hauts faits » (points de haut fait) entre Or et Temps de jeu.
 `1.12.3` : textes d'aide des champs raccourcis : « Rech. objet », « Rech. recette » (infobulles inchangées).
 `1.12.2` : champs de recherche plus étroits (105 pixels chacun).

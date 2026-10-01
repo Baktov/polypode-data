@@ -262,7 +262,7 @@ local COLUMNS = {
 	{ "Hauts faits", function(key)
 		local identity = Sections(key).I
 		return identity and identity.ap and tostring(identity.ap) or ""
-	end, tip = { "Points de haut fait", "Points de haut fait (communs aux personnages d'un même compte)." } },
+	end, tip = { "Points de haut fait", "Points des hauts faits obtenus par ce personnage (pas le total du bataillon)." } },
 	{ "Temps de jeu", function(key)
 		local seconds = PlayedSeconds(key)
 		return seconds and FormatDuration(seconds) or ""
