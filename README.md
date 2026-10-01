@@ -171,6 +171,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 ## Version
 
 `1.9.1` : personnage supprimé dans Polypode (Maj + clic) : ses données relevées sont oubliées, ici et sur les autres clients connectés.
+`1.14.0` : tri du tableau par clic sur un en-tête (Personnage, Niveau, iLvl, Métiers, Or, Hauts faits, Temps de jeu, Vu) ; clic suivant : ordre inverse ; tri gardé.
 `1.13.5` : deux colonnes de métiers (une par métier principal), toutes deux alignées à gauche.
 `1.13.4` : colonne Métiers alignée à gauche (icônes les unes sous les autres).
 `1.13.3` : correctif : l'équipement, les sacs, les métiers et l'or d'un personnage pouvaient être effacés à la déconnexion (relevé fait à la fermeture de la fenêtre de métier, quand le jeu a déjà vidé ces données). Aucun relevé pendant la sortie du monde, et un relevé vide ne remplace plus un relevé plein.

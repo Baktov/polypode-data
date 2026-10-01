@@ -254,42 +254,127 @@ local COLUMNS = {
 	{ "Niveau", function(key)
 		local identity = Sections(key).I
 		return identity and identity.l and tostring(identity.l) or ""
+	end, sort = function(key)
+		return tonumber((Sections(key).I or {}).l)
 	end, tip = { "Niveau", "Niveau du personnage." } },
 	{ "iLvl", function(key)
 		local identity = Sections(key).I
 		return identity and identity.i and tostring(identity.i) or ""
+	end, sort = function(key)
+		return tonumber((Sections(key).I or {}).i)
 	end, tip = { "Niveau d'objet", "Niveau d'objet moyen équipé." } },
 	-- Métiers principaux : une colonne chacun, alignées à gauche (icônes les unes sous les autres) ;
 	-- la seconde sans en-tête, les deux se lisent comme un bloc « Métiers ».
 	{ "Métiers", function(key)
 		local profession = MainProfession(key, 1)
 		return profession and (Icon(profession.icon) .. " " .. profession.level) or ""
+	end, sort = function(key)
+		local profession = MainProfession(key, 1)
+		return profession and profession.level
 	end, align = "LEFT",
 	tip = { "Métiers", "Métiers principaux et leur niveau (tous les métiers au survol d'un personnage)." } },
 	{ "", function(key)
 		local profession = MainProfession(key, 2)
 		return profession and (Icon(profession.icon) .. " " .. profession.level) or ""
+	end, sort = function(key)
+		local profession = MainProfession(key, 2)
+		return profession and profession.level
 	end, align = "LEFT",
 	tip = { "Métiers", "Second métier principal et son niveau." } },
 	{ "Or", function(key)
 		local identity = Sections(key).I
 		return identity and FormatGold(identity.g) or ""
+	end, sort = function(key)
+		return tonumber((Sections(key).I or {}).g)
 	end, tip = { "Or", "Or sur le personnage." } },
 	{ "Hauts faits", function(key)
 		local identity = Sections(key).I
 		return identity and identity.ap and tostring(identity.ap) or ""
+	end, sort = function(key)
+		return tonumber((Sections(key).I or {}).ap)
 	end, tip = { "Points de haut fait", "Points des hauts faits obtenus par ce personnage (pas le total du bataillon)." } },
 	{ "Temps de jeu", function(key)
 		local seconds = PlayedSeconds(key)
 		return seconds and FormatDuration(seconds) or ""
-	end, tip = { "Temps de jeu", "Temps de jeu total (relevé à la connexion, puis compté)." } },
-	{ "Vu", SeenText, tip = { "Dernière connexion", "« en ligne », ou quand le personnage a été vu connecté." } },
+	end, sort = PlayedSeconds, tip = { "Temps de jeu", "Temps de jeu total (relevé à la connexion, puis compté)." } },
+	{ "Vu", SeenText, sort = function(key)
+		if IsOnline(key) then
+			return math.huge -- en ligne : le plus récent
+		end
+		local _, entry = Sections(key)
+		return entry and tonumber(entry.seen)
+	end, tip = { "Dernière connexion", "« en ligne », ou quand le personnage a été vu connecté." } },
 }
+
+-- TRI PAR COLONNE (clic sur un en-tête) : sortColumn = 0 (nom) ou n° de colonne, sortDesc =
+-- ordre inverse ; gardés dans PolypodeDataDB.window. Sans tri choisi : personnage joué en tête,
+-- puis ordre alphabétique. Premier clic : noms de A à Z, nombres du plus grand au plus petit ;
+-- clic suivant sur la même colonne : ordre inverse.
+local SORT_UP = "|TInterface\\Buttons\\Arrow-Up-Up:12:12:0:-2|t"
+local SORT_DOWN = "|TInterface\\Buttons\\Arrow-Down-Up:12:12:0:2|t"
+
+local function SetSort(column)
+	local settings = WindowSettings()
+	if settings.sortColumn == column then
+		settings.sortDesc = not settings.sortDesc
+	else
+		settings.sortColumn = column
+		settings.sortDesc = column ~= 0 -- nombres : du plus grand au plus petit
+	end
+	ns.Refresh()
+end
+
+-- Flèche du tri en cours sur l'en-tête de la colonne column, sinon "".
+local function SortMark(column)
+	local settings = WindowSettings()
+	if settings.sortColumn ~= column then
+		return ""
+	end
+	return " " .. (settings.sortDesc and SORT_DOWN or SORT_UP)
+end
+
+local function SortItems(items)
+	local settings = WindowSettings()
+	local column = settings.sortColumn
+	if column == nil or (column ~= 0 and not (COLUMNS[column] and COLUMNS[column].sort)) then
+		return
+	end
+	local values, names = {}, {}
+	for _, item in ipairs(items) do
+		names[item.key] = Normalize(CharacterName(item.key))
+		if column ~= 0 then
+			local ok, value = pcall(COLUMNS[column].sort, item.key)
+			values[item.key] = ok and tonumber(value) or nil
+		end
+	end
+	local desc = settings.sortDesc
+	table.sort(items, function(a, b)
+		if column ~= 0 then
+			local va, vb = values[a.key], values[b.key]
+			if va ~= vb then
+				if va == nil or vb == nil then
+					return vb == nil -- sans valeur : toujours en bas
+				end
+				if desc then
+					return va > vb
+				end
+				return va < vb
+			end
+		elseif names[a.key] ~= names[b.key] then
+			if desc then
+				return names[a.key] > names[b.key]
+			end
+			return names[a.key] < names[b.key]
+		end
+		return names[a.key] < names[b.key]
+	end)
+end
 
 local function BuildCharacterItems()
 	local keys = ns.GetKeys()
 	keys[P.GetCharKey()] = true
 	local items = P.SortedKeyItems(keys, IsOwn)
+	SortItems(items)
 	local header = { columnHeader = true, cells = {}, tips = {} }
 	local used = {}
 	for _, item in ipairs(items) do
@@ -310,7 +395,7 @@ local function BuildCharacterItems()
 	end
 	wipe(columnWidths)
 	for i, column in ipairs(COLUMNS) do
-		header.cells[i] = "|cffffd200" .. column[1] .. "|r"
+		header.cells[i] = "|cffffd200" .. column[1] .. "|r" .. SortMark(i)
 		header.tips[i] = column.tip
 		local width = 0
 		if used[i] then
@@ -1441,12 +1526,25 @@ local function CellHover(row, i)
 	row.cellHovers = row.cellHovers or {}
 	local hover = row.cellHovers[i]
 	if not hover then
-		hover = CreateFrame("Frame", nil, row)
+		-- En-tête de colonne : infobulle, et clic = trier par cette colonne (SetSort).
+		hover = CreateFrame("Button", nil, row)
 		hover:SetFrameLevel(row:GetFrameLevel() + 2)
+		hover.column = i
+		local highlight = hover:CreateTexture(nil, "HIGHLIGHT")
+		highlight:SetAllPoints()
+		highlight:SetColorTexture(1, 1, 1, 0.08)
+		hover:SetScript("OnClick", function(self)
+			if COLUMNS[self.column] and COLUMNS[self.column].sort then
+				SetSort(self.column)
+			end
+		end)
 		hover:SetScript("OnEnter", function(self)
 			GameTooltip:SetOwner(self, "ANCHOR_TOP")
 			GameTooltip:AddLine(self.tip[1])
 			GameTooltip:AddLine(self.tip[2], 1, 1, 1, true)
+			if COLUMNS[self.column] and COLUMNS[self.column].sort then
+				GameTooltip:AddLine("Clic : trier par cette colonne (clic suivant : ordre inverse)", 0.6, 0.6, 0.6, true)
+			end
 			GameTooltip:Show()
 		end)
 		hover:SetScript("OnLeave", GameTooltip_Hide)
@@ -1804,7 +1902,7 @@ local function Build()
 
 	P.CreateScrollList(listPanel, function(data)
 		if data.columnHeader then
-			return ""
+			return "|cffffd200Personnage|r" .. SortMark(0)
 		elseif data.result then
 			return Icon(ItemIcon(data.result.itemID)) .. " " .. data.result.colored
 				.. Gray("  ×" .. data.result.total)
@@ -1818,7 +1916,10 @@ local function Build()
 		return CharacterName(data.key) .. (guild and guild ~= "" and Gray(" (" .. guild .. ")") or "")
 	end, nil, {
 		onClick = function(data, button)
-			if data.recipe then
+			if data.columnHeader then
+				SetSort(0) -- tri par nom (hors colonnes : leurs en-têtes ont leur propre clic)
+				return
+			elseif data.recipe then
 				ShowSpell(data.recipe.id)
 				return
 			elseif not data.key then
@@ -1834,7 +1935,7 @@ local function Build()
 		end,
 		tooltip = function(data)
 			if data.columnHeader then
-				return nil
+				return { "Personnage", "Clic : trier par nom (clic suivant : ordre inverse)" }
 			elseif data.result then
 				return ResultTooltip(data.result)
 			elseif data.recipe then
