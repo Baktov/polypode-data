@@ -452,7 +452,12 @@ function ns.StartDeposit()
 		for kind in pairs(inBank) do
 			accessible[kind] = true
 		end
-		status = "Rien à ranger : aucun objet des sacs n'est déjà dans " .. BanksText(accessible) .. "."
+		-- Aucun objet éligible : dit à l'écran aussi (le bouton « Ranger » de l'en-tête et le clic
+		-- droit sur « Data » n'ont pas de ligne d'état).
+		status = "Tous les objets ont déjà été déposés dans " .. BanksText(accessible) .. "."
+		if UIErrorsFrame then
+			UIErrorsFrame:AddMessage(status, 1, 0.82, 0)
+		end
 		Notify()
 		return
 	end
