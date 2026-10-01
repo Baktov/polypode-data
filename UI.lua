@@ -259,6 +259,10 @@ local COLUMNS = {
 		local identity = Sections(key).I
 		return identity and FormatGold(identity.g) or ""
 	end, tip = { "Or", "Or sur le personnage." } },
+	{ "Hauts faits", function(key)
+		local identity = Sections(key).I
+		return identity and identity.ap and tostring(identity.ap) or ""
+	end, tip = { "Points de haut fait", "Points de haut fait (communs aux personnages d'un même compte)." } },
 	{ "Temps de jeu", function(key)
 		local seconds = PlayedSeconds(key)
 		return seconds and FormatDuration(seconds) or ""
@@ -1437,14 +1441,31 @@ end
 
 -- Place les cellules d'une ligne (lignes recyclées : tout est recalculé ici) ; renvoie la
 -- cellule la plus à gauche, contre laquelle le nom s'arrête.
+-- Colonnes placées de gauche à droite à partir de COLUMNS_START (40 %) de la largeur de la
+-- fenêtre ; si elles ne tiennent pas de là jusqu'au bord droit, elles s'y recollent.
+local COLUMNS_START = 0.4
+local ROW_LEFT = 22 -- bord gauche des lignes dans la fenêtre (cadre de la liste + marge de la liste)
+
+local function ColumnsStart(row)
+	local total = 0
+	for _, width in ipairs(columnWidths) do
+		if width > 0 then
+			total = total + width + COLUMN_GAP
+		end
+	end
+	local rowWidth = (frame and frame:GetWidth() or 0) - 2 * ROW_LEFT
+	local wanted = (frame and frame:GetWidth() or 0) * COLUMNS_START - ROW_LEFT
+	return math.max(0, math.min(wanted, rowWidth - total + COLUMN_GAP - 4))
+end
+
 local function LayoutCells(row, data)
 	row.cells = row.cells or {}
 	for _, hover in pairs(row.cellHovers or {}) do
 		hover:Hide()
 	end
-	local offset = -4
+	local offset = ColumnsStart(row)
 	local firstCell
-	for i = #columnWidths, 1, -1 do
+	for i = 1, #columnWidths do
 		local cell = row.cells[i]
 		if not cell then
 			cell = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -1455,12 +1476,12 @@ local function LayoutCells(row, data)
 		local width = columnWidths[i]
 		if width > 0 and data.cells then
 			cell:ClearAllPoints()
-			cell:SetPoint("RIGHT", row, "RIGHT", offset, 0)
+			cell:SetPoint("LEFT", row, "LEFT", offset, 0)
 			cell:SetWidth(width)
 			cell:SetText(data.cells[i] or "")
 			cell:Show()
-			offset = offset - width - COLUMN_GAP
-			firstCell = cell
+			offset = offset + width + COLUMN_GAP
+			firstCell = firstCell or cell -- la plus à gauche : le nom s'arrête avant
 			local tip = data.tips and data.tips[i]
 			if tip then
 				local hover = CellHover(row, i)
@@ -1752,6 +1773,17 @@ local function Build()
 		current.width, current.height = frame:GetSize()
 	end)
 	frame.resizeGrip = grip
+	-- Colonnes recalées à 40 % de la largeur pendant le redimensionnement (regroupé).
+	local relayoutPending
+	frame:HookScript("OnSizeChanged", function()
+		if not relayoutPending then
+			relayoutPending = true
+			C_Timer.After(0.05, function()
+				relayoutPending = nil
+				ns.Refresh()
+			end)
+		end
+	end)
 
 	P.CreateScrollList(listPanel, function(data)
 		if data.columnHeader then

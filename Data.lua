@@ -9,6 +9,7 @@ local P = Polypode -- dépendance obligatoire (## Dependencies: Polypode), charg
 --
 -- Sections (une table { clé = valeur } chacune ; valeurs sans « , : = ») :
 --   I identité : c classe (fichier), r race, l niveau, i niveau d'objet équipé, s spécialisation,
+--     ap points de haut fait,
 --     f faction, g or (pièces de cuivre), z zone, p temps de jeu (s) relevé à la date pa ;
 --   T métiers : p1 / p2 principaux, s1 / s2 / s3 archéologie, pêche, cuisine =
 --     « skillLine/niveau/max/icône/nom » ;
@@ -84,6 +85,9 @@ local function ReadIdentity()
 	local guild = GetGuildInfo and GetGuildInfo("player")
 	data.gu = guild and Clean(guild) or nil
 	data.p, data.pa = played, playedAt
+	-- Points de haut fait (communs aux personnages d'un même compte).
+	local okPoints, points = pcall(GetTotalAchievementPoints)
+	data.ap = okPoints and tonumber(points) or nil
 	return data
 end
 
@@ -736,7 +740,7 @@ events:RegisterEvent("PLAYER_LOGIN")
 events:RegisterEvent("PLAYER_LOGOUT")
 for _, event in ipairs({
 	"PLAYER_ENTERING_WORLD", "PLAYER_LEVEL_UP", "PLAYER_MONEY", "ZONE_CHANGED_NEW_AREA",
-	"PLAYER_SPECIALIZATION_CHANGED", "PLAYER_EQUIPMENT_CHANGED", "SKILL_LINES_CHANGED",
+	"PLAYER_SPECIALIZATION_CHANGED", "PLAYER_EQUIPMENT_CHANGED", "SKILL_LINES_CHANGED", "ACHIEVEMENT_EARNED",
 	"BAG_UPDATE_DELAYED", "BANKFRAME_OPENED", "BANKFRAME_CLOSED", "PLAYERBANKSLOTS_CHANGED",
 	"PLAYER_ACCOUNT_BANK_TAB_SLOTS_CHANGED", "BANK_TABS_CHANGED", "TIME_PLAYED_MSG",
 	"PLAYER_INTERACTION_MANAGER_FRAME_SHOW", "PLAYER_INTERACTION_MANAGER_FRAME_HIDE", -- banque de guilde
