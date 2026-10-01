@@ -1101,6 +1101,26 @@ local function CreateCard()
 				row.rightButton:SetScript("OnLeave", GameTooltip_Hide)
 			end
 			row.rightButton:SetShown(data.rightDetail ~= nil)
+			-- Surbrillance de la ligne (texture HIGHLIGHT de P.CreateScrollList) : moitié gauche seulement
+			-- quand la droite a sa propre zone cliquable, pour ne montrer que le métier survolé.
+			if row.rowHighlight == nil then
+				row.rowHighlight = false
+				for _, region in ipairs({ row:GetRegions() }) do
+					if region.GetDrawLayer and region:GetDrawLayer() == "HIGHLIGHT" then
+						row.rowHighlight = region
+						break
+					end
+				end
+			end
+			if row.rowHighlight then
+				row.rowHighlight:ClearAllPoints()
+				row.rowHighlight:SetPoint("TOPLEFT", row, "TOPLEFT")
+				if data.rightDetail then
+					row.rowHighlight:SetPoint("BOTTOMRIGHT", row, "BOTTOM")
+				else
+					row.rowHighlight:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT")
+				end
+			end
 			row.text:SetPoint("RIGHT", data.right and row.rightText or row, data.right and "LEFT" or "RIGHT",
 				data.right and -4 or -4, 0)
 		end,

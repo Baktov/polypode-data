@@ -161,6 +161,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 ## Version
 
 `1.9.1` : personnage supprimé dans Polypode (Maj + clic) : ses données relevées sont oubliées, ici et sur les autres clients connectés.
+`1.11.1` : fiche d'un personnage : au survol d'un métier, seule sa moitié de ligne est en surbrillance.
 `1.11.0` : métiers cliquables dans la fiche d'un personnage : objets de métier et recettes apprises par extension (relevées fenêtre du métier ouverte).
 `1.10.4` : une seule fiche par personnage : un clic gauche sur un personnage dont la fiche est déjà ouverte la ramène au premier plan.
 `1.10.3` : « Ranger » sans objet éligible : « Tous les objets ont déjà été déposés dans … », affiché aussi à l'écran.
