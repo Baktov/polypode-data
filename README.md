@@ -56,6 +56,13 @@ au clic : la fiche du contenu, la même que depuis le détail du personnage. Une
 ouverte avec ce personnage (ou un personnage de la guilde) n'est pas encore relevée : l'infobulle
 l'indique.
 
+**Clic droit** sur une icône : **Remettre à zéro** efface ce relevé (sur ce client). Les sacs sont
+relus aussitôt ; une banque doit être **rouverte** pour être relevée de nouveau (le message le rappelle).
+
+La banque de bataillon appartient à un **compte Battle.net**, la banque de guilde à une **guilde** :
+quel que soit le personnage qui l'ouvre, Polypode Data n'en garde **qu'un relevé** (le plus récent
+remplace les autres, jamais cumulés).
+
 ### Dépôts possibles
 
 Le bouton **Dépôts** (à gauche de la barre de titre) ouvre une fiche (déplaçable, croix pour la
@@ -137,6 +144,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 ## Version
 
 `1.9.1` : personnage supprimé dans Polypode (Maj + clic) : ses données relevées sont oubliées, ici et sur les autres clients connectés.
+`1.10.0` : banque de bataillon (par compte Battle.net) et banque de guilde (par guilde) : un seul relevé gardé, le plus récent remplace les autres au lieu de s'y ajouter (doublons des versions précédentes nettoyés) ; relevé ignoré tant que la banque n'est pas chargée ; clic droit sur les icônes sacs / banques : remise à zéro.
 `1.9.0` : métiers sur deux colonnes (infobulle et fiche) ; fiche épinglée d'un personnage : équipement en icônes comme la fenêtre de personnage de WoW (infobulle de l'objet au survol).
 `1.8.3` : infobulle de « Ranger » : titre en jaune, résumé en bleu (« tout objet des sacs qui existe déjà dans une banque y est rangé »), puis le détail (en rouge si le bouton est grisé).
 `1.8.2` : bouton « Ranger » aussi dans la barre de titre, entre « Dépôts » et l'icône du sac.

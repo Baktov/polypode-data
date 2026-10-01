@@ -159,10 +159,23 @@ function ns.IsGuildBankOpen()
 	return guildBankOpen
 end
 
+-- Contenu des sacs de kind, ou nil si aucun emplacement n'est lisible (banque pas encore chargée :
+-- un relevé vide remplacerait le bon). Banque de bataillon : a = compte Battle.net (token), pour
+-- ne garder qu'une copie par compte (voir BANQUES PARTAGÉES).
 local function ReadContainers(kind)
 	local data = {}
 	if not (C_Container and C_Container.GetContainerNumSlots and C_Container.GetContainerItemInfo) then
 		return data
+	end
+	local slots = 0
+	for _, bag in ipairs(BagIDs(kind)) do
+		slots = slots + (C_Container.GetContainerNumSlots(bag) or 0)
+	end
+	if slots == 0 and kind ~= "B" then
+		return nil
+	end
+	if kind == "A" then
+		data.a = P.GetTeamToken and P.GetTeamToken() or nil
 	end
 	for _, bag in ipairs(BagIDs(kind)) do
 		for slot = 1, C_Container.GetContainerNumSlots(bag) or 0 do
@@ -328,10 +341,109 @@ if P.RegisterCharacterData then
 	})
 end
 
+-- BANQUES PARTAGÉES ----------------------------------------------------------------------------
+-- La banque de bataillon appartient à un compte Battle.net, la banque de guilde à une guilde :
+-- plusieurs personnages en ont un relevé (le leur, ou reçu). Une seule copie est gardée par
+-- compte / guilde, la plus récente ; les autres sont effacées (leur version reste notée, pour ne
+-- pas redemander cette copie ancienne à la synchro). Jamais cumulées.
+
+-- Compte Battle.net d'un personnage (token de Polypode ; personnage joué : le sien).
+function ns.AccountOf(key)
+	if key == P.GetCharKey() then
+		return P.GetTeamToken and P.GetTeamToken() or key
+	end
+	local roster = P.db.roster[key]
+	return roster and roster.token or key
+end
+
+-- Propriétaire d'une section partagée d'un personnage : compte (A, noté dans le relevé depuis
+-- 1.9.2, sinon d'après le roster) ou guilde (G) ; nil pour les autres sections.
+function ns.SharedOwner(key, section)
+	local entry = Entry(key)
+	local data = entry and entry.s[section]
+	if section == "A" then
+		return data and (data.a or ns.AccountOf(key)) or nil
+	elseif section == "G" then
+		return data and data.n or nil
+	end
+end
+
+-- Garde la copie la plus récente de la section partagée de ce propriétaire.
+local function KeepNewestShared(section, owner)
+	if not (store and owner) then
+		return
+	end
+	local newestKey, newestVersion
+	for key, entry in pairs(store) do
+		if entry.s[section] and ns.SharedOwner(key, section) == owner then
+			local version = tonumber(entry.t[section]) or 0
+			if not newestVersion or version > newestVersion then
+				newestKey, newestVersion = key, version
+			end
+		end
+	end
+	for key, entry in pairs(store) do
+		if key ~= newestKey and entry.s[section] and ns.SharedOwner(key, section) == owner then
+			entry.s[section] = nil
+		end
+	end
+end
+
+-- REMISE À ZÉRO (clic droit sur les icônes sacs / banques de la fenêtre, UI.lua) : efface le
+-- relevé du personnage joué (B sacs, K banque), de la banque de bataillon de son compte (A, toutes
+-- les copies) ou de la banque de guilde de sa guilde (G, toutes les copies), sur ce client. Le
+-- prochain relevé l'enregistre de nouveau (sacs : tout de suite ; banques : à leur réouverture).
+local lastText -- défini dans SYNCHRO (texte de la dernière version de chaque section)
+local ScheduleUpdate -- défini dans SYNCHRO
+
+function ns.ResetSection(section)
+	local key = P.GetCharKey()
+	local owner
+	if section == "A" then
+		owner = ns.AccountOf(key)
+	elseif section == "G" then
+		local own = Entry(key)
+		owner = own and own.s.I and own.s.I.gu
+	end
+	for otherKey, entry in pairs(store or {}) do
+		local match
+		if section == "A" or section == "G" then
+			match = owner and ns.SharedOwner(otherKey, section) == owner
+		else
+			match = otherKey == key
+		end
+		if match then
+			entry.s[section] = nil
+		end
+	end
+	if lastText then
+		lastText[section] = nil -- le prochain relevé est enregistré même identique
+	end
+	if section == "B" and ScheduleUpdate then
+		ScheduleUpdate()
+	end
+end
+
+-- Toutes les copies en double (nettoyage au chargement).
+local function KeepNewestSharedAll()
+	for _, section in ipairs({ "A", "G" }) do
+		local owners = {}
+		for key in pairs(store or {}) do
+			local owner = ns.SharedOwner(key, section)
+			if owner then
+				owners[owner] = true
+			end
+		end
+		for owner in pairs(owners) do
+			KeepNewestShared(section, owner)
+		end
+	end
+end
+
 -- SYNCHRO ----------------------------------------------------------------------------------
 
 local changed = {} -- sections du personnage joué modifiées depuis le dernier envoi
-local lastText = {} -- [section] = texte de la dernière version, pour détecter un changement
+lastText = {} -- (déclaré dans REMISE À ZÉRO) [section] = texte de la dernière version, pour détecter un changement
 local pushPending, scanPending
 
 local function Token()
@@ -398,6 +510,7 @@ local function Update(send)
 				entry.t[section] = NextVersion(entry.t[section])
 				changed[section] = true
 				any = true
+				KeepNewestShared(section, ns.SharedOwner(P.GetCharKey(), section))
 			end
 		end
 	end
@@ -410,7 +523,7 @@ local function Update(send)
 	end
 end
 
-local function ScheduleUpdate()
+function ScheduleUpdate() -- déclaré dans REMISE À ZÉRO
 	if not scanPending then
 		scanPending = true
 		C_Timer.After(SCAN_DELAY, Update)
@@ -496,9 +609,10 @@ local function OnData(rest, sender)
 	for pair in (data or ""):gmatch("[^,]+") do
 		local k, v = pair:match("^([^=]+)=(.*)$")
 		if k then
-			target[k] = tonumber(v) or v
+			target[k] = (k == "a" or k == "n") and v or (tonumber(v) or v) -- compte / guilde : texte
 		end
 	end
+	KeepNewestShared(section, ns.SharedOwner(key, section))
 	RefreshSoon()
 end
 
@@ -562,6 +676,7 @@ events:SetScript("OnEvent", function(_, event, ...)
 			PolypodeDataDB = PolypodeDataDB or {}
 			PolypodeDataDB.chars = PolypodeDataDB.chars or {}
 			store = PolypodeDataDB.chars
+			KeepNewestSharedAll() -- copies en double des versions précédentes
 		end
 		return
 	elseif event == "PLAYER_LOGIN" then

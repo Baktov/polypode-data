@@ -195,23 +195,18 @@ local function ContainerCount(data)
 	return total, distinct
 end
 
--- Compte Battle.net d'un personnage (token), pour la banque de bataillon commune.
-local function AccountOf(key)
-	if IsOwn(key) then
-		return P.GetTeamToken and P.GetTeamToken() or key
-	end
-	local roster = P.db.roster[key]
-	return roster and roster.token or key
-end
+-- Compte Battle.net d'un personnage (token), pour la banque de bataillon commune (Data.lua).
+local AccountOf = ns.AccountOf
 
--- Banque de bataillon la plus récente par compte : { [compte] = { key, data, version } }.
+-- Banque de bataillon la plus récente par compte : { [compte] = { key, data, version } } ; compte
+-- noté dans le relevé (ns.SharedOwner), une seule copie gardée par compte (Data.lua).
 local function WarbandBanks()
 	local banks = {}
 	for key in pairs(ns.GetKeys()) do
 		local sections, entry = Sections(key)
 		local version = entry and tonumber(entry.t.A)
 		if sections.A and version then
-			local account = AccountOf(key)
+			local account = ns.SharedOwner(key, "A")
 			if not banks[account] or banks[account].version < version then
 				banks[account] = { key = key, data = sections.A, version = version }
 			end
@@ -601,6 +596,13 @@ local function OwnContainer(code)
 	}
 end
 
+local REOPEN_HINT_SHORT = {
+	B = "sacs relus aussitôt",
+	K = "à rouvrir pour la relever",
+	A = "à rouvrir pour la relever",
+	G = "à rouvrir pour la relever",
+}
+
 -- Infobulle d'un bouton : nombre d'objets, d'objets différents, date du relevé.
 local function OwnContainerTooltip(owner, code)
 	local container = OwnContainer(code)
@@ -617,10 +619,37 @@ local function OwnContainerTooltip(owner, code)
 			GameTooltip:AddLine("Relevé " .. FormatWhen(container.version), 0.6, 0.6, 0.6)
 		end
 		GameTooltip:AddLine("Clic : contenu détaillé", 0.6, 0.6, 0.6)
+		GameTooltip:AddLine("Clic droit : remettre à zéro (" .. REOPEN_HINT_SHORT[code] .. ")", 0.6, 0.6, 0.6, true)
 	else
 		GameTooltip:AddLine(container.missing, 0.6, 0.6, 0.6, true)
 	end
 	GameTooltip:Show()
+end
+
+-- Clic droit : remise à zéro du relevé (ns.ResetSection, Data.lua) ; il faut rouvrir la banque
+-- pour le relever de nouveau (les sacs sont relus aussitôt).
+local REOPEN_HINT = {
+	B = "Les sacs sont relus aussitôt.",
+	K = "Rouvrez la banque avec ce personnage pour la relever de nouveau.",
+	A = "Rouvrez une banque (avec un personnage de ce compte) pour relever de nouveau la banque de bataillon.",
+	G = "Rouvrez la banque de guilde pour la relever de nouveau.",
+}
+
+local function ShowOwnContainerMenu(owner, code)
+	if not (MenuUtil and MenuUtil.CreateContextMenu) then
+		return
+	end
+	local container = OwnContainer(code)
+	MenuUtil.CreateContextMenu(owner, function(_, root)
+		root:CreateTitle(container.title)
+		root:CreateButton("Remettre à zéro", function()
+			ns.ResetSection(code)
+			if UIErrorsFrame then
+				UIErrorsFrame:AddMessage(container.title .. " : relevé effacé. " .. REOPEN_HINT[code], 1, 0.82, 0)
+			end
+			ns.Refresh()
+		end)
+	end)
 end
 
 -- Clic : fiche épinglée du contenu (relue à chaque rafraîchissement).
@@ -1374,8 +1403,13 @@ local function Build()
 		button:SetScript("OnMouseUp", function()
 			icon:SetAllPoints()
 		end)
-		button:SetScript("OnClick", function()
-			OpenOwnContainer(spec.code)
+		button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+		button:SetScript("OnClick", function(self, mouseButton)
+			if mouseButton == "RightButton" then
+				ShowOwnContainerMenu(self, spec.code)
+			else
+				OpenOwnContainer(spec.code)
+			end
 		end)
 		button:SetScript("OnEnter", function(self)
 			OwnContainerTooltip(self, spec.code)
