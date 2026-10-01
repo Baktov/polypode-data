@@ -254,7 +254,8 @@ local COLUMNS = {
 			end
 		end
 		return table.concat(parts, "  ")
-	end, tip = { "Métiers", "Métiers principaux et leur niveau (tous les métiers au survol d'un personnage)." } },
+	end, align = "LEFT", -- icônes alignées les unes sous les autres
+	tip = { "Métiers", "Métiers principaux et leur niveau (tous les métiers au survol d'un personnage)." } },
 	{ "Or", function(key)
 		local identity = Sections(key).I
 		return identity and FormatGold(identity.g) or ""
@@ -1478,6 +1479,7 @@ local function LayoutCells(row, data)
 			cell:ClearAllPoints()
 			cell:SetPoint("LEFT", row, "LEFT", offset, 0)
 			cell:SetWidth(width)
+			cell:SetJustifyH(COLUMNS[i] and COLUMNS[i].align or "RIGHT") -- à droite, sauf Métiers
 			cell:SetText(data.cells[i] or "")
 			cell:Show()
 			offset = offset + width + COLUMN_GAP
