@@ -18,7 +18,7 @@ local DEFAULT_WIDTH, DEFAULT_HEIGHT = 700, 360
 local COLUMN_GAP = 14
 local MIN_SEARCH = 2 -- lettres avant de lancer la recherche
 
-local frame, listPanel, searchBox
+local frame, listPanel, searchBox, recipeBox
 local columnWidths = {} -- largeurs des colonnes affichées (0 = masquée)
 local measure -- texte caché servant à mesurer les cellules
 local namesPending = false -- noms d'objets demandés au serveur (recherche, fiches)
@@ -1488,6 +1488,70 @@ local function IsSearching()
 	return #text >= MIN_SEARCH, text
 end
 
+-- RECHERCHE DE RECETTES (champ sous celui des objets) : dans les recettes apprises relevées de
+-- tous les personnages en mémoire (section R), par nom (celui du sort de la recette, sans accents
+-- ni majuscules). Résultat : { id, name, holders = { { key, label } } } (label = extension).
+local function IsRecipeSearching()
+	local text = recipeBox and recipeBox:GetText() or ""
+	return #text >= MIN_SEARCH, text
+end
+
+local function SearchRecipes(query)
+	local needle = Normalize(query)
+	local byID = {}
+	for key in pairs(ns.GetKeys()) do
+		local recipes = Sections(key).R or {}
+		for itemKey, value in pairs(recipes) do
+			local recipeID = tonumber(tostring(itemKey):match("^r(%d+)$") or "")
+			if recipeID then
+				local tier = recipes["c" .. tostring(value)]
+				local label = tier and tostring(tier):match("^%d+/(.*)$") or ""
+				local result = byID[recipeID]
+				if result == nil then
+					local name = SpellName(recipeID)
+					result = name and Normalize(name):find(needle, 1, true) and { id = recipeID, name = name, holders = {} }
+						or false
+					byID[recipeID] = result
+				end
+				if result then
+					result.holders[#result.holders + 1] = { key = key, label = label }
+				end
+			end
+		end
+	end
+	local results = {}
+	for _, result in pairs(byID) do
+		if result then
+			table.sort(result.holders, function(a, b)
+				return Normalize(CharacterName(a.key)) < Normalize(CharacterName(b.key))
+			end)
+			results[#results + 1] = result
+		end
+	end
+	table.sort(results, function(a, b)
+		return Normalize(a.name) < Normalize(b.name)
+	end)
+	return results
+end
+
+local function RecipeRightText(recipe)
+	local names = {}
+	for _, holder in ipairs(recipe.holders) do
+		names[#names + 1] = CharacterName(holder.key)
+	end
+	return table.concat(names, "  ")
+end
+
+local function RecipeTooltip(recipe)
+	local icon = C_Spell and C_Spell.GetSpellTexture and C_Spell.GetSpellTexture(recipe.id)
+	local lines = { Icon(icon) .. " " .. recipe.name }
+	for _, holder in ipairs(recipe.holders) do
+		lines[#lines + 1] = CharacterName(holder.key) .. (holder.label ~= "" and Gray("  " .. holder.label) or "")
+	end
+	lines[#lines + 1] = Gray("Clic : infobulle de la recette")
+	return lines
+end
+
 local function ShowForgetMenu(key)
 	if not (MenuUtil and MenuUtil.CreateContextMenu) or IsOwn(key) then
 		return
@@ -1619,14 +1683,17 @@ local function Build()
 	frame.CloseButton = closeBtn
 
 	searchBox = CreateFrame("EditBox", nil, frame, "SearchBoxTemplate")
-	searchBox:SetSize(200, 20)
+	searchBox:SetSize(240, 20)
 	searchBox:SetPoint("RIGHT", closeBtn, "LEFT", -8, 0)
 	title:SetPoint("RIGHT", searchBox, "LEFT", -12, 0)
 	searchBox:SetAutoFocus(false)
 	if searchBox.Instructions then
 		searchBox.Instructions:SetText("Rechercher un objet")
 	end
-	searchBox:HookScript("OnTextChanged", function()
+	searchBox:HookScript("OnTextChanged", function(self, userInput)
+		if userInput and self:GetText() ~= "" and recipeBox and recipeBox:GetText() ~= "" then
+			recipeBox:SetText("") -- une seule recherche à la fois
+		end
 		ns.Refresh()
 	end)
 	searchBox:HookScript("OnEnter", function(self)
@@ -1638,8 +1705,32 @@ local function Build()
 	end)
 	searchBox:HookScript("OnLeave", GameTooltip_Hide)
 
+	-- Recherche de recettes, sous celle des objets.
+	recipeBox = CreateFrame("EditBox", nil, frame, "SearchBoxTemplate")
+	recipeBox:SetSize(240, 20)
+	recipeBox:SetPoint("TOPRIGHT", searchBox, "BOTTOMRIGHT", 0, -4)
+	recipeBox:SetAutoFocus(false)
+	if recipeBox.Instructions then
+		recipeBox.Instructions:SetText("Rechercher une recette")
+	end
+	recipeBox:HookScript("OnTextChanged", function(self, userInput)
+		if userInput and self:GetText() ~= "" and searchBox:GetText() ~= "" then
+			searchBox:SetText("") -- une seule recherche à la fois
+		end
+		ns.Refresh()
+	end)
+	recipeBox:HookScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+		GameTooltip:AddLine("Rechercher une recette")
+		GameTooltip:AddLine("Dès " .. MIN_SEARCH .. " lettres : recettes apprises de tous les personnages en "
+			.. "mémoire dont le nom contient le texte (sans accents ni majuscules), avec qui les connaît. "
+			.. "Recettes relevées en ouvrant la fenêtre de chaque métier.", 1, 1, 1, true)
+		GameTooltip:Show()
+	end)
+	recipeBox:HookScript("OnLeave", GameTooltip_Hide)
+
 	listPanel = P.CreatePanel(frame, "")
-	listPanel:SetPoint("TOPLEFT", 12, -36)
+	listPanel:SetPoint("TOPLEFT", 12, -60) -- sous les deux champs de recherche
 	listPanel:SetPoint("BOTTOMRIGHT", -12, 12)
 
 	-- Poignée de redimensionnement (coin bas-droit), taille gardée dans PolypodeDataDB.window.
@@ -1666,11 +1757,17 @@ local function Build()
 		elseif data.result then
 			return Icon(ItemIcon(data.result.itemID)) .. " " .. data.result.colored
 				.. Gray("  ×" .. data.result.total)
+		elseif data.recipe then
+			local icon = C_Spell and C_Spell.GetSpellTexture and C_Spell.GetSpellTexture(data.recipe.id)
+			return Icon(icon) .. " " .. data.recipe.name .. Gray("  ×" .. #data.recipe.holders)
 		end
 		return CharacterName(data.key)
 	end, nil, {
 		onClick = function(data, button)
-			if not data.key then
+			if data.recipe then
+				ShowSpell(data.recipe.id)
+				return
+			elseif not data.key then
 				return
 			elseif button == "RightButton" then
 				ShowForgetMenu(data.key)
@@ -1686,6 +1783,8 @@ local function Build()
 				return nil
 			elseif data.result then
 				return ResultTooltip(data.result)
+			elseif data.recipe then
+				return RecipeTooltip(data.recipe)
 			end
 			return CharacterTooltip(data.key)
 		end,
@@ -1699,8 +1798,8 @@ local function Build()
 				row.rightText:SetJustifyH("RIGHT")
 				row.rightText:SetWordWrap(false)
 			end
-			if data.result then
-				row.rightText:SetText(ResultRightText(data.result))
+			if data.result or data.recipe then
+				row.rightText:SetText(data.result and ResultRightText(data.result) or RecipeRightText(data.recipe))
 				row.rightText:Show()
 				row.text:SetPoint("RIGHT", row.rightText, "LEFT", -6, 0)
 			elseif firstCell then
@@ -1716,6 +1815,7 @@ local function Build()
 	P.ui.dataFrame = frame
 	P.ui.dataPanel = listPanel
 	P.ui.dataSearchBox = searchBox
+	P.ui.dataRecipeBox = recipeBox
 
 	P.SkinFrame(frame)
 	P.SkinPanel(listPanel)
@@ -1733,8 +1833,18 @@ function ns.Refresh()
 		return
 	end
 	local searching, query = IsSearching()
+	local recipeSearching, recipeQuery = IsRecipeSearching()
 	local items, header, emptyText
-	if searching then
+	if recipeSearching and not searching then
+		wipe(columnWidths)
+		items = {}
+		for _, recipe in ipairs(SearchRecipes(recipeQuery)) do
+			items[#items + 1] = { recipe = recipe }
+		end
+		header = "Recherche de recette « " .. recipeQuery .. " » : " .. #items .. " recette(s)"
+			.. (namesPending and Gray("  · chargement des noms…") or "")
+		emptyText = "Aucune recette trouvée (recettes relevées en ouvrant la fenêtre de chaque métier)."
+	elseif searching then
 		wipe(columnWidths)
 		items = {}
 		for _, result in ipairs(SearchItems(query)) do

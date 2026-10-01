@@ -63,6 +63,16 @@ La banque de bataillon appartient à un **compte Battle.net**, la banque de guil
 quel que soit le personnage qui l'ouvre, Polypode Data n'en garde **qu'un relevé** (le plus récent
 remplace les autres, jamais cumulés).
 
+### Rechercher une recette
+
+Sous le champ **Rechercher un objet**, un second champ **Rechercher une recette** : dès 2 lettres,
+la liste devient celle des recettes apprises (de tous les personnages en mémoire) dont le nom
+contient le texte, sans tenir compte des accents ni des majuscules. Chaque recette indique
+combien de personnages la connaissent et lesquels ; au survol, chacun avec l'extension de la
+recette ; un clic ouvre l'infobulle de la recette. Une seule recherche à la fois : taper dans un
+champ vide l'autre. Seules les recettes déjà relevées sont trouvées (fenêtre de chaque métier
+ouverte une fois avec chaque personnage).
+
 ### Métiers d'un personnage
 
 Dans la fiche épinglée d'un personnage, **chaque métier est cliquable** (y compris celui de la
@@ -161,6 +171,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 ## Version
 
 `1.9.1` : personnage supprimé dans Polypode (Maj + clic) : ses données relevées sont oubliées, ici et sur les autres clients connectés.
+`1.12.0` : champ « Rechercher une recette » sous celui des objets : recettes apprises de tous les personnages en mémoire, avec qui les connaît.
 `1.11.1` : fiche d'un personnage : au survol d'un métier, seule sa moitié de ligne est en surbrillance.
 `1.11.0` : métiers cliquables dans la fiche d'un personnage : objets de métier et recettes apprises par extension (relevées fenêtre du métier ouverte).
 `1.10.4` : une seule fiche par personnage : un clic gauche sur un personnage dont la fiche est déjà ouverte la ramène au premier plan.
