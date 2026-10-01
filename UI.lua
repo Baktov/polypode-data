@@ -1693,7 +1693,7 @@ local function Build()
 	title:SetPoint("RIGHT", searchBox, "LEFT", -12, 0)
 	searchBox:SetAutoFocus(false)
 	if searchBox.Instructions then
-		searchBox.Instructions:SetText("Rechercher un objet")
+		searchBox.Instructions:SetText("Rech. objet")
 	end
 	searchBox:HookScript("OnTextChanged", function(self, userInput)
 		if userInput and self:GetText() ~= "" and recipeBox and recipeBox:GetText() ~= "" then
@@ -1713,7 +1713,7 @@ local function Build()
 	-- Recherche de recettes (créée plus haut, à droite de celle des objets).
 	recipeBox:SetAutoFocus(false)
 	if recipeBox.Instructions then
-		recipeBox.Instructions:SetText("Rechercher une recette")
+		recipeBox.Instructions:SetText("Rech. recette")
 	end
 	recipeBox:HookScript("OnTextChanged", function(self, userInput)
 		if userInput and self:GetText() ~= "" and searchBox:GetText() ~= "" then
