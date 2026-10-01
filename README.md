@@ -171,6 +171,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 ## Version
 
 `1.9.1` : personnage supprimé dans Polypode (Maj + clic) : ses données relevées sont oubliées, ici et sur les autres clients connectés.
+`1.12.2` : champs de recherche plus étroits (105 pixels chacun).
 `1.12.1` : les deux champs de recherche côte à côte à droite du titre (barre de titre de nouveau sur une ligne).
 `1.12.0` : champ « Rechercher une recette » sous celui des objets : recettes apprises de tous les personnages en mémoire, avec qui les connaît.
 `1.11.1` : fiche d'un personnage : au survol d'un métier, seule sa moitié de ligne est en surbrillance.

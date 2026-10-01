@@ -13,8 +13,8 @@ local P = Polypode
 -- Colonnes ancrées au bord droit, à la largeur de leur plus long contenu (mesurée à chaque
 -- rafraîchissement) ; le nom prend la place restante (comme la fenêtre de Polypode Suivi).
 
-local MIN_WIDTH, MIN_HEIGHT = 720, 220 -- largeur : boutons, titre et deux champs de recherche
-local SEARCH_WIDTH = 150 -- chaque champ de recherche (objets, recettes), côte à côte
+local MIN_WIDTH, MIN_HEIGHT = 640, 220 -- largeur : boutons, titre et deux champs de recherche
+local SEARCH_WIDTH = 105 -- chaque champ de recherche (objets, recettes), côte à côte
 local DEFAULT_WIDTH, DEFAULT_HEIGHT = 820, 360
 local COLUMN_GAP = 14
 local MIN_SEARCH = 2 -- lettres avant de lancer la recherche
