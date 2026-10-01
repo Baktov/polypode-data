@@ -1795,7 +1795,10 @@ local function Build()
 			local icon = C_Spell and C_Spell.GetSpellTexture and C_Spell.GetSpellTexture(data.recipe.id)
 			return Icon(icon) .. " " .. data.recipe.name .. Gray("  ×" .. #data.recipe.holders)
 		end
-		return CharacterName(data.key)
+		-- Nom, puis sa guilde entre parenthèses (relevée avec l'identité).
+		local identity = Sections(data.key).I
+		local guild = identity and identity.gu
+		return CharacterName(data.key) .. (guild and guild ~= "" and Gray(" (" .. guild .. ")") or "")
 	end, nil, {
 		onClick = function(data, button)
 			if data.recipe then
