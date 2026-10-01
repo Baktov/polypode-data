@@ -65,7 +65,7 @@ remplace les autres, jamais cumulés).
 
 ### Rechercher une recette
 
-Sous le champ **Rechercher un objet**, un second champ **Rechercher une recette** : dès 2 lettres,
+À droite du champ **Rechercher un objet** (tous deux à droite du titre), un second champ **Rechercher une recette** : dès 2 lettres,
 la liste devient celle des recettes apprises (de tous les personnages en mémoire) dont le nom
 contient le texte, sans tenir compte des accents ni des majuscules. Chaque recette indique
 combien de personnages la connaissent et lesquels ; au survol, chacun avec l'extension de la
@@ -171,6 +171,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 ## Version
 
 `1.9.1` : personnage supprimé dans Polypode (Maj + clic) : ses données relevées sont oubliées, ici et sur les autres clients connectés.
+`1.12.1` : les deux champs de recherche côte à côte à droite du titre (barre de titre de nouveau sur une ligne).
 `1.12.0` : champ « Rechercher une recette » sous celui des objets : recettes apprises de tous les personnages en mémoire, avec qui les connaît.
 `1.11.1` : fiche d'un personnage : au survol d'un métier, seule sa moitié de ligne est en surbrillance.
 `1.11.0` : métiers cliquables dans la fiche d'un personnage : objets de métier et recettes apprises par extension (relevées fenêtre du métier ouverte).

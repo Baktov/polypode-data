@@ -13,8 +13,9 @@ local P = Polypode
 -- Colonnes ancrées au bord droit, à la largeur de leur plus long contenu (mesurée à chaque
 -- rafraîchissement) ; le nom prend la place restante (comme la fenêtre de Polypode Suivi).
 
-local MIN_WIDTH, MIN_HEIGHT = 620, 220
-local DEFAULT_WIDTH, DEFAULT_HEIGHT = 700, 360
+local MIN_WIDTH, MIN_HEIGHT = 720, 220 -- largeur : boutons, titre et deux champs de recherche
+local SEARCH_WIDTH = 150 -- chaque champ de recherche (objets, recettes), côte à côte
+local DEFAULT_WIDTH, DEFAULT_HEIGHT = 820, 360
 local COLUMN_GAP = 14
 local MIN_SEARCH = 2 -- lettres avant de lancer la recherche
 
@@ -1682,9 +1683,13 @@ local function Build()
 	closeBtn:SetPoint("TOPRIGHT", -4, -4)
 	frame.CloseButton = closeBtn
 
+	-- Deux champs côte à côte à droite du titre : objets, puis recettes (contre la croix).
+	recipeBox = CreateFrame("EditBox", nil, frame, "SearchBoxTemplate")
+	recipeBox:SetSize(SEARCH_WIDTH, 20)
+	recipeBox:SetPoint("RIGHT", closeBtn, "LEFT", -8, 0)
 	searchBox = CreateFrame("EditBox", nil, frame, "SearchBoxTemplate")
-	searchBox:SetSize(240, 20)
-	searchBox:SetPoint("RIGHT", closeBtn, "LEFT", -8, 0)
+	searchBox:SetSize(SEARCH_WIDTH, 20)
+	searchBox:SetPoint("RIGHT", recipeBox, "LEFT", -10, 0)
 	title:SetPoint("RIGHT", searchBox, "LEFT", -12, 0)
 	searchBox:SetAutoFocus(false)
 	if searchBox.Instructions then
@@ -1705,10 +1710,7 @@ local function Build()
 	end)
 	searchBox:HookScript("OnLeave", GameTooltip_Hide)
 
-	-- Recherche de recettes, sous celle des objets.
-	recipeBox = CreateFrame("EditBox", nil, frame, "SearchBoxTemplate")
-	recipeBox:SetSize(240, 20)
-	recipeBox:SetPoint("TOPRIGHT", searchBox, "BOTTOMRIGHT", 0, -4)
+	-- Recherche de recettes (créée plus haut, à droite de celle des objets).
 	recipeBox:SetAutoFocus(false)
 	if recipeBox.Instructions then
 		recipeBox.Instructions:SetText("Rechercher une recette")
@@ -1730,7 +1732,7 @@ local function Build()
 	recipeBox:HookScript("OnLeave", GameTooltip_Hide)
 
 	listPanel = P.CreatePanel(frame, "")
-	listPanel:SetPoint("TOPLEFT", 12, -60) -- sous les deux champs de recherche
+	listPanel:SetPoint("TOPLEFT", 12, -36)
 	listPanel:SetPoint("BOTTOMRIGHT", -12, 12)
 
 	-- Poignée de redimensionnement (coin bas-droit), taille gardée dans PolypodeDataDB.window.
