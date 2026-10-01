@@ -954,6 +954,16 @@ end
 -- texte si vide ; action : bouton et ligne d'état (voir UpdateCardAction), nil = aucun.
 OpenCard = function(title, build, empty, action, gearKey)
 	local card
+	-- Une seule fiche par personnage : déjà ouverte, elle est ramenée au premier plan, sur place.
+	if gearKey then
+		for _, existing in ipairs(cards) do
+			if existing:IsShown() and existing.gearKey == gearKey then
+				existing:Raise()
+				FillCard(existing)
+				return existing
+			end
+		end
+	end
 	for _, existing in ipairs(cards) do
 		if not existing:IsShown() then
 			card = existing
