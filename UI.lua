@@ -1597,16 +1597,33 @@ end)
 -- INTÉGRATION À POLYPODE -------------------------------------------------------------------------
 
 if P.AddTitleButton then
+	-- Clic droit (bouton de la fenêtre Polypode et celui de la colonne de la barre flottante) :
+	-- la même action que « Ranger » (DEPOSIT_ACTION) ; sans banque utilisable, la raison s'affiche.
 	P.AddTitleButton({
 		text = "Data",
 		width = 50,
-		onClick = function()
-			P.ToggleData()
+		rightClick = true,
+		onClick = function(_, mouseButton)
+			if mouseButton ~= "RightButton" then
+				P.ToggleData()
+				return
+			end
+			if not ns.IsDepositRunning() then
+				local ok, reason = ns.CanDeposit()
+				if not ok then
+					UIErrorsFrame:AddMessage(reason, 1, 0.3, 0.3)
+					return
+				end
+			end
+			DEPOSIT_ACTION.onClick()
+			ns.UpdateDepositControls()
 		end,
 		tooltip = {
 			"Données des personnages",
 			"Niveau, or, métiers, équipement, sacs et banques de tous vos personnages, avec recherche "
 				.. "d'objet (détail au survol d'un personnage).",
+			"Clic droit : ranger (comme le bouton « Ranger » : objets des sacs déjà présents dans la banque "
+				.. "ouverte) ; pendant le rangement, clic droit pour l'arrêter.",
 		},
 		onCreate = function(button)
 			P.ui.dataButton = button

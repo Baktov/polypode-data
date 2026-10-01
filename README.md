@@ -78,7 +78,8 @@ son infobulle. Les banques doivent avoir été relevées (ouvertes une fois). La
 toute seule (butin, dépôt, données reçues) ; le bouton la referme.
 
 **Ranger** (en haut de la fiche, et aussi dans la barre de titre de la fenêtre, entre **Dépôts** et
-l'icône du sac : même bouton, même fonction) : dépose les objets des sacs qui se trouvent **déjà** dans une
+l'icône du sac : même bouton, même fonction ; ou **clic droit** sur le bouton **Data** de la fenêtre
+Polypode ou de la barre flottante) : dépose les objets des sacs qui se trouvent **déjà** dans une
 banque ouverte, et seulement eux :
 
 - destination : la **banque du personnage** si l'objet y est, sinon la **banque de bataillon**
@@ -144,6 +145,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 ## Version
 
 `1.9.1` : personnage supprimé dans Polypode (Maj + clic) : ses données relevées sont oubliées, ici et sur les autres clients connectés.
+`1.10.2` : clic droit sur le bouton « Data » (fenêtre Polypode et colonne de la barre flottante) : ranger, comme le bouton « Ranger ».
 `1.10.1` : infobulle d'un personnage sans les rappels de clic en bas (« Clic gauche : épingler… », « Clic droit : oublier… »).
 `1.10.0` : banque de bataillon (par compte Battle.net) et banque de guilde (par guilde) : un seul relevé gardé, le plus récent remplace les autres au lieu de s'y ajouter (doublons des versions précédentes nettoyés) ; relevé ignoré tant que la banque n'est pas chargée ; clic droit sur les icônes sacs / banques : remise à zéro.
 `1.9.0` : métiers sur deux colonnes (infobulle et fiche) ; fiche épinglée d'un personnage : équipement en icônes comme la fenêtre de personnage de WoW (infobulle de l'objet au survol).
