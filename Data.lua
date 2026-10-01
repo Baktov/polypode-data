@@ -43,6 +43,11 @@ local SEND_DELAY = 10 -- secondes : envoi des sections modifiées aux clients co
 local store -- PolypodeDataDB.chars
 local bankOpen = false
 local tradeSkillOpen = false -- fenêtre d'un métier ouverte (TRADE_SKILL_SHOW / CLOSE)
+-- Personnage en train de quitter le monde (déconnexion, écran de chargement) : de
+-- PLAYER_LEAVING_WORLD à PLAYER_ENTERING_WORLD, aucun relevé. Le jeu a alors déjà vidé sacs,
+-- équipement, métiers et or, et ferme ses fenêtres (métier, banque) : un relevé à ce moment
+-- écraserait les données (cause de pertes avant 1.13.3).
+local leavingWorld = false
 local guildBankOpen = false
 local GUILD_TAB_SLOTS = 98 -- emplacements d'un onglet de banque de guilde
 local guildTabs = {} -- [onglet] = { i<itemID> = nombre }, onglets relevés pendant cette visite
@@ -608,8 +613,22 @@ end
 
 -- Relit le personnage joué ; les sections changées reçoivent une nouvelle version et partent
 -- aux clients connectés (sauf send == false, à la déconnexion).
+-- Sections dont un relevé vide est suspect (jeu pas prêt ou en train de quitter) : il ne
+-- remplace pas un relevé non vide. Identité : niveau 0 suspect de même.
+local KEEP_IF_EMPTY = { E = true, B = true, T = true }
+
+local function Suspicious(section, data, old)
+	if section == "I" then
+		return (tonumber(data.l) or 0) <= 0
+	end
+	return KEEP_IF_EMPTY[section] and next(data) == nil and old ~= nil and next(old) ~= nil
+end
+
 local function Update(send)
 	scanPending = nil
+	if leavingWorld then
+		return -- déconnexion / écran de chargement : données du jeu déjà vidées
+	end
 	local entry = Entry(P.GetCharKey(), true)
 	if not entry then
 		return
@@ -618,7 +637,7 @@ local function Update(send)
 	local any = false
 	for _, section in ipairs(ns.SECTIONS) do
 		local ok, data = pcall(READERS[section]) -- une API qui change ne doit pas tout bloquer
-		if ok and data then
+		if ok and data and not Suspicious(section, data, entry.s[section]) then
 			local text = table.concat(SectionItems(data), ",")
 			if lastText[section] == nil and entry.s[section] then
 				lastText[section] = table.concat(SectionItems(entry.s[section]), ",")
@@ -777,6 +796,7 @@ local events = CreateFrame("Frame")
 events:RegisterEvent("ADDON_LOADED")
 events:RegisterEvent("PLAYER_LOGIN")
 events:RegisterEvent("PLAYER_LOGOUT")
+events:RegisterEvent("PLAYER_LEAVING_WORLD")
 for _, event in ipairs({
 	"PLAYER_ENTERING_WORLD", "PLAYER_LEVEL_UP", "PLAYER_MONEY", "ZONE_CHANGED_NEW_AREA",
 	"PLAYER_SPECIALIZATION_CHANGED", "PLAYER_EQUIPMENT_CHANGED", "SKILL_LINES_CHANGED", "ACHIEVEMENT_EARNED",
@@ -791,6 +811,9 @@ for _, event in ipairs({
 	end
 end
 events:SetScript("OnEvent", function(_, event, ...)
+	if event == "PLAYER_ENTERING_WORLD" then
+		leavingWorld = false
+	end
 	if event == "ADDON_LOADED" then
 		if ... == "Polypode_Data" then
 			PolypodeDataDB = PolypodeDataDB or {}
@@ -807,6 +830,9 @@ events:SetScript("OnEvent", function(_, event, ...)
 			played, playedAt = tonumber(identity.p), tonumber(identity.pa)
 		end
 		RequestPlayedSilently()
+	elseif event == "PLAYER_LEAVING_WORLD" then
+		leavingWorld = true -- plus de relevé jusqu'au retour dans le monde
+		return
 	elseif event == "PLAYER_LOGOUT" then
 		-- Pas de relevé ici : à la déconnexion, sacs, équipement, métiers et or sont déjà vidés
 		-- par le jeu (GetMoney = 0, sacs vides...) et écraseraient les données. On garde le
