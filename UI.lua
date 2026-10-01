@@ -237,6 +237,19 @@ end
 -- TABLEAU DES PERSONNAGES -----------------------------------------------------------------------
 
 -- Colonnes : { en-tête, cellule(clé), tip = { titre, texte } }.
+-- n-ième métier principal (p1, p2) d'un personnage, ou nil.
+local function MainProfession(key, n)
+	local count = 0
+	for _, profession in ipairs(Professions(key)) do
+		if profession.slot == "p1" or profession.slot == "p2" then
+			count = count + 1
+			if count == n then
+				return profession
+			end
+		end
+	end
+end
+
 local COLUMNS = {
 	{ "Niveau", function(key)
 		local identity = Sections(key).I
@@ -246,16 +259,18 @@ local COLUMNS = {
 		local identity = Sections(key).I
 		return identity and identity.i and tostring(identity.i) or ""
 	end, tip = { "Niveau d'objet", "Niveau d'objet moyen équipé." } },
+	-- Métiers principaux : une colonne chacun, alignées à gauche (icônes les unes sous les autres) ;
+	-- la seconde sans en-tête, les deux se lisent comme un bloc « Métiers ».
 	{ "Métiers", function(key)
-		local parts = {}
-		for _, profession in ipairs(Professions(key)) do
-			if profession.slot == "p1" or profession.slot == "p2" then
-				parts[#parts + 1] = Icon(profession.icon) .. " " .. profession.level
-			end
-		end
-		return table.concat(parts, "  ")
-	end, align = "LEFT", -- icônes alignées les unes sous les autres
+		local profession = MainProfession(key, 1)
+		return profession and (Icon(profession.icon) .. " " .. profession.level) or ""
+	end, align = "LEFT",
 	tip = { "Métiers", "Métiers principaux et leur niveau (tous les métiers au survol d'un personnage)." } },
+	{ "", function(key)
+		local profession = MainProfession(key, 2)
+		return profession and (Icon(profession.icon) .. " " .. profession.level) or ""
+	end, align = "LEFT",
+	tip = { "Métiers", "Second métier principal et son niveau." } },
 	{ "Or", function(key)
 		local identity = Sections(key).I
 		return identity and FormatGold(identity.g) or ""
