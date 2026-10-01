@@ -144,6 +144,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 ## Version
 
 `1.9.1` : personnage supprimé dans Polypode (Maj + clic) : ses données relevées sont oubliées, ici et sur les autres clients connectés.
+`1.10.1` : infobulle d'un personnage sans les rappels de clic en bas (« Clic gauche : épingler… », « Clic droit : oublier… »).
 `1.10.0` : banque de bataillon (par compte Battle.net) et banque de guilde (par guilde) : un seul relevé gardé, le plus récent remplace les autres au lieu de s'y ajouter (doublons des versions précédentes nettoyés) ; relevé ignoré tant que la banque n'est pas chargée ; clic droit sur les icônes sacs / banques : remise à zéro.
 `1.9.0` : métiers sur deux colonnes (infobulle et fiche) ; fiche épinglée d'un personnage : équipement en icônes comme la fenêtre de personnage de WoW (infobulle de l'objet au survol).
 `1.8.3` : infobulle de « Ranger » : titre en jaune, résumé en bleu (« tout objet des sacs qui existe déjà dans une banque y est rangé »), puis le détail (en rouge si le bouton est grisé).

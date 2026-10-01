@@ -672,11 +672,6 @@ local function CharacterTooltip(key)
 			lines[#lines + 1] = entry.text
 		end
 	end
-	lines[#lines + 1] = " "
-	lines[#lines + 1] = Gray("Clic gauche : épingler cette fiche (déplaçable, plusieurs possibles)")
-	if not IsOwn(key) then
-		lines[#lines + 1] = Gray("Clic droit : oublier ce personnage")
-	end
 	return lines
 end
 
