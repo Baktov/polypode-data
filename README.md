@@ -118,6 +118,10 @@ banque ouverte, et seulement eux :
 - un objet **unique** (« Unique », « Unique (n) ») que la banque de bataillon ou de guilde contient
   déjà au maximum permis reste dans les sacs, sans tentative de dépôt (le jeu le refuserait :
   ces banques comptent à part), et c'est signalé à la fin ;
+- un objet dont le jeu **refuse** le dépôt (« Vous ne pouvez pas emporter plus de ces objets »...)
+  n'est pas retenté : il reste dans les sacs, le rangement continue avec les suivants, et à la
+  fin un message dans **votre** fenêtre de discussion (visible de vous seul) liste les objets
+  refusés, avec leur lien ;
 - s'il n'y a plus de place pour un objet, il reste dans les sacs (les suivants peuvent encore
   compléter une pile existante) et c'est signalé à la fin ; le rangement s'arrête si la banque
   se ferme ; pendant le rangement, le bouton devient **Arrêter**.
@@ -173,6 +177,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 
 ## Version
 
+`1.14.4` : correctif « Ranger » : un dépôt refusé par le serveur (accepté d'abord par le jeu, puis l'objet revient dans le sac, ex. hachette de récolte en banque de bataillon) était retenté sans fin, message d'erreur en boucle. L'objet est maintenant laissé dans les sacs sans nouvelle tentative, et les objets refusés sont listés dans le chat (message local) à la fin.
 `1.14.3` : « Ranger » : un objet unique déjà présent au maximum permis dans la banque de bataillon ou de guilde reste dans les sacs (plus de dépôt refusé par le jeu, « vous ne pouvez pas en avoir plus ») ; signalé dans le bilan.
 `1.14.2` : détail d'un personnage : chaque banque sur deux lignes (nom et nombre d'objets, puis en gris la guilde, l'or et la date du relevé), lisibles sans être tronquées dans la fiche.
 `1.14.1` : correctif : l'or, le niveau d'objet et la guilde d'un personnage pouvaient être effacés à la déconnexion (relevé fait juste avant la sortie du monde, quand le jeu les a déjà vidés). Un relevé d'identité dont le niveau d'objet tombe à 0 est ignoré ; la guilde connue est gardée tant que le serveur n'a pas renvoyé son nom.

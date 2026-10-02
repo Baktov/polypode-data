@@ -353,7 +353,14 @@ local function Finish(reason)
 	run.ticker:Cancel()
 	local done, total, skipped, full, used = run.done, run.total, run.skipped, run.full, run.used
 	local uniqueText = run.uniqueText or ""
+	local refused = run.refused or {}
 	run = nil
+	-- Objets refusés par le serveur : listés dans le chat (message local, visible de vous seul),
+	-- avec leur lien cliquable ; exception voulue à « pas de print() » (demande de l'utilisateur).
+	if #refused > 0 and DEFAULT_CHAT_FRAME then
+		DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99Polypode Data|r : dépôt refusé par le jeu pour "
+			.. #refused .. " objet(s), laissé(s) dans les sacs : " .. table.concat(refused, ", "), 1, 0.5, 0.25)
+	end
 	local counts = done .. " sur " .. total .. " objets déposés"
 	if reason == "closed" then
 		status = "|cffff4040Banque fermée|r : " .. counts .. "."
@@ -368,6 +375,9 @@ local function Finish(reason)
 		status = "|cff40ff40Les " .. done .. " objets ont été déposés dans " .. BanksText(used) .. ".|r"
 	end
 	status = status .. uniqueText -- objets uniques laissés dans les sacs (limite atteinte)
+	if #refused > 0 then
+		status = status .. " " .. #refused .. " refusé(s) par le jeu (liste dans le chat)."
+	end
 	Notify()
 end
 
@@ -387,6 +397,7 @@ end
 
 -- Prend la pile (ou amount exemplaires) de entry et la pose avec place() ; faux si refusé.
 local function Move(entry, info, amount, place)
+	entry.before = info.stackCount or 1 -- taille avant : refus du serveur détecté par Step
 	if amount < (info.stackCount or 1) then
 		C_Container.SplitContainerItem(entry.bag, entry.slot, amount)
 	else
@@ -465,6 +476,17 @@ local function Step()
 			NextEntry(false)
 		end
 		return
+	end
+	-- REFUS DU SERVEUR : le client accepte le dépôt (curseur vide), puis le serveur le refuse
+	-- (« Vous ne pouvez pas emporter plus de ces objets »...) et l'objet revient dans le sac. Pile
+	-- déverrouillée sans avoir diminué : pas de nouvelle tentative (sinon boucle d'erreurs),
+	-- l'objet est noté pour le bilan et le rangement passe au suivant.
+	if entry.before then
+		if (info.stackCount or 1) >= entry.before then
+			run.refused[#run.refused + 1] = info.hyperlink or ("objet n° " .. entry.itemID)
+			return NextEntry(false)
+		end
+		entry.before = nil -- une partie est passée (pile partagée) : on continue avec le reste
 	end
 	if entry.kind == "G" then
 		return GuildStep(entry, info)
@@ -550,7 +572,7 @@ function ns.StartDeposit()
 		return
 	end
 	run = { queue = queue, index = 1, done = 0, skipped = 0, total = #queue, since = GetTime(),
-		full = {}, used = {}, fullTabs = {}, uniqueText = uniqueText }
+		full = {}, used = {}, fullTabs = {}, uniqueText = uniqueText, refused = {} }
 	run.ticker = C_Timer.NewTicker(STEP_INTERVAL, Step)
 	Progress()
 	Notify()
