@@ -128,6 +128,11 @@ local function ReadIdentity()
 	data.z = GetRealZoneText and Clean(GetRealZoneText()) or nil
 	local guild = GetGuildInfo and GetGuildInfo("player")
 	data.gu = guild and Clean(guild) or nil
+	if not guild and IsInGuild and IsInGuild() then
+		-- En guilde mais nom pas encore reçu du serveur (connexion) : on garde le nom connu.
+		local own = store and store[P.GetCharKey()]
+		data.gu = own and own.s.I and own.s.I.gu or nil
+	end
 	data.p, data.pa = played, playedAt
 	-- Points de haut fait de ce personnage (pas ceux du bataillon).
 	local okPoints, points = pcall(CharacterAchievementPoints)
@@ -614,12 +619,15 @@ end
 -- Relit le personnage joué ; les sections changées reçoivent une nouvelle version et partent
 -- aux clients connectés (sauf send == false, à la déconnexion).
 -- Sections dont un relevé vide est suspect (jeu pas prêt ou en train de quitter) : il ne
--- remplace pas un relevé non vide. Identité : niveau 0 suspect de même.
+-- remplace pas un relevé non vide. Identité : niveau 0, ou niveau d'objet tombé à 0, suspect de même.
 local KEEP_IF_EMPTY = { E = true, B = true, T = true }
 
 local function Suspicious(section, data, old)
 	if section == "I" then
-		return (tonumber(data.l) or 0) <= 0
+		-- Niveau d'objet équipé tombé à 0 : le jeu a vidé l'équipement (déconnexion commencée
+		-- avant PLAYER_LEAVING_WORLD), l'or et la guilde avec ; ce relevé effacerait les bons.
+		local oldIlvl = old and tonumber(old.i) or 0
+		return (tonumber(data.l) or 0) <= 0 or (data.i ~= nil and tonumber(data.i) <= 0 and oldIlvl > 0)
 	end
 	return KEEP_IF_EMPTY[section] and next(data) == nil and old ~= nil and next(old) ~= nil
 end
