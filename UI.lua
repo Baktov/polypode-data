@@ -739,53 +739,60 @@ local function CharacterEntries(key, noEquipment)
 	end
 
 	local name = P.GetDisplayName(key)
+	-- Une banque par ligne (nom et nombre d'objets), précisions en gris sur la ligne suivante
+	-- (guilde, or, date du relevé) : sur une seule ligne, la fiche les tronquait.
 	local containers = {}
+	local function Counts(data)
+		local total, distinct = ContainerCount(data)
+		return " : " .. total .. " objets (" .. distinct .. " différents)"
+	end
+	local function Read(at)
+		return "relevée " .. FormatWhen(at)
+	end
 	for _, part in ipairs({ { "B", "Sacs" }, { "K", "Banque" } }) do
 		local data = sections[part[1]]
 		if data then
-			local total, distinct = ContainerCount(data)
-			local when = part[1] == "K" and entry and entry.t.K and Gray(" (relevée " .. FormatWhen(entry.t.K) .. ")") or ""
-			containers[#containers + 1] = { "  " .. part[2] .. " : " .. total .. " objets (" .. distinct .. " différents)" .. when,
+			containers[#containers + 1] = { "  " .. part[2] .. Counts(data),
 				function()
 					OpenCard(part[2] .. " de " .. name, function()
 						return ContainerEntries((Sections(key))[part[1]])
 					end)
-				end }
+				end, part[1] == "K" and entry and entry.t.K and Gray(Read(entry.t.K)) or nil }
 		end
 	end
 	local bank = WarbandBanks()[AccountOf(key)]
 	if bank then
-		local total, distinct = ContainerCount(bank.data)
 		local account = AccountOf(key)
-		containers[#containers + 1] = { "  Banque de bataillon : " .. total .. " objets (" .. distinct .. " différents)"
-			.. Gray(" (relevée " .. FormatWhen(bank.version) .. ")"),
+		containers[#containers + 1] = { "  Banque de bataillon" .. Counts(bank.data),
 			function()
 				OpenCard("Banque de bataillon", function()
 					local current = WarbandBanks()[account]
 					return ContainerEntries(current and current.data)
 				end)
-			end }
+			end, Gray(Read(bank.version)) }
 	end
 	local guild = identity.gu
 	local guildBank = guild and GuildBanks()[guild]
 	if guildBank then
-		local total, distinct = ContainerCount(guildBank.data)
 		local money = tonumber(guildBank.data.m)
-		containers[#containers + 1] = { "  Banque de guilde (" .. guild .. ") : " .. total .. " objets (" .. distinct
-			.. " différents)" .. (money and (" · " .. FormatGold(money)) or "")
-			.. Gray(" (relevée " .. FormatWhen(guildBank.version) .. ")"),
+		containers[#containers + 1] = { "  Banque de guilde" .. Counts(guildBank.data),
 			function()
 				OpenCard("Banque de guilde " .. guild, function()
 					local current = GuildBanks()[guild]
 					return ContainerEntries(current and current.data)
 				end)
-			end }
+			end, Gray(guild .. " · ") .. (money and (FormatGold(money) .. Gray(" · ")) or "")
+				.. Gray(Read(guildBank.version)) }
 	end
 	if #containers > 0 then
 		Add(" ")
 		Add("|cffffd200Sacs et banques|r")
 		for _, line in ipairs(containers) do
 			Add(line[1], line[2], "Clic : contenu détaillé")
+			if line[3] then
+				-- Même clic que la ligne de la banque, sans la marque « » ».
+				entries[#entries + 1] = { text = "      " .. line[3], detail = line[2], hint = "Clic : contenu détaillé" }
+			end
 		end
 		if not (entry and entry.t.K) then
 			Add("  " .. Gray("Banque : ouvrez-la une fois avec ce personnage pour la relever"))

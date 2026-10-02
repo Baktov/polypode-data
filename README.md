@@ -171,6 +171,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 ## Version
 
 `1.9.1` : personnage supprimé dans Polypode (Maj + clic) : ses données relevées sont oubliées, ici et sur les autres clients connectés.
+`1.14.2` : détail d'un personnage : chaque banque sur deux lignes (nom et nombre d'objets, puis en gris la guilde, l'or et la date du relevé), lisibles sans être tronquées dans la fiche.
 `1.14.1` : correctif : l'or, le niveau d'objet et la guilde d'un personnage pouvaient être effacés à la déconnexion (relevé fait juste avant la sortie du monde, quand le jeu les a déjà vidés). Un relevé d'identité dont le niveau d'objet tombe à 0 est ignoré ; la guilde connue est gardée tant que le serveur n'a pas renvoyé son nom.
 `1.14.0` : tri du tableau par clic sur un en-tête (Personnage, Niveau, iLvl, Métiers, Or, Hauts faits, Temps de jeu, Vu) ; clic suivant : ordre inverse ; tri gardé.
 `1.13.5` : deux colonnes de métiers (une par métier principal), toutes deux alignées à gauche.
