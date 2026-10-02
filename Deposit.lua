@@ -194,6 +194,77 @@ local function Allowed(kind, bag, slot, info)
 	return not ok or allowed
 end
 
+-- OBJETS UNIQUES : un objet « Unique » (ou « Unique (n) », limite partagée par une catégorie
+-- d'objets) ne peut pas dépasser sa limite dans la banque de bataillon ou de guilde, qui compte à
+-- part (le jeu refuse : « vous ne pouvez pas en avoir plus ») ; la banque du personnage compte avec
+-- les sacs, un dépôt n'y change rien. Limite et catégorie : C_Item.GetItemUniquenessByID.
+local uniqueCache = {} -- [itemID] = { limit, categoryID } ou false (pas unique)
+
+-- Limite d'exemplaires d'un objet et sa catégorie de limite (nil si l'objet n'est pas unique).
+local function UniqueLimit(itemID)
+	local cached = uniqueCache[itemID]
+	if cached == nil then
+		cached = false
+		local ok, isUnique, _, categoryCount, categoryID = pcall(function()
+			return C_Item.GetItemUniquenessByID(itemID)
+		end)
+		if ok and isUnique then
+			cached = { (tonumber(categoryCount) or 0) > 0 and tonumber(categoryCount) or 1, categoryID }
+		end
+		uniqueCache[itemID] = cached
+	end
+	if cached then
+		return cached[1], cached[2]
+	end
+end
+
+-- Exemplaires d'objets uniques dans une banque : { items = { [itemID] = n }, categories =
+-- { [categoryID] = n } }. Banque de guilde : présence seulement (1 par objet), seul l'onglet
+-- affiché étant lisible en entier.
+local function UniqueCounts(kind, itemsInBank)
+	local counts = { items = {}, categories = {} }
+	local function Add(itemID, count)
+		local limit, categoryID = UniqueLimit(itemID)
+		if limit then
+			counts.items[itemID] = (counts.items[itemID] or 0) + count
+			if categoryID then
+				counts.categories[categoryID] = (counts.categories[categoryID] or 0) + count
+			end
+		end
+	end
+	if kind == "G" then
+		for itemID in pairs(itemsInBank) do
+			Add(itemID, 1)
+		end
+	else
+		for _, target in ipairs(BankSlots(kind)) do
+			if target.itemID then
+				Add(target.itemID, math.max(target.count, 1))
+			end
+		end
+	end
+	return counts
+end
+
+-- Vrai si déposer count exemplaires de itemID dépasserait sa limite d'objet unique dans cette
+-- banque (counts : UniqueCounts) ; sinon les compte comme déposés (deux exemplaires des sacs ne
+-- passent pas tous les deux).
+local function OverUniqueLimit(counts, itemID, count)
+	local limit, categoryID = UniqueLimit(itemID)
+	if not limit then
+		return false
+	end
+	local have = categoryID and counts.categories[categoryID] or counts.items[itemID] or 0
+	if have + count > limit then
+		return true
+	end
+	counts.items[itemID] = (counts.items[itemID] or 0) + count
+	if categoryID then
+		counts.categories[categoryID] = (counts.categories[categoryID] or 0) + count
+	end
+	return false
+end
+
 -- Place pour count exemplaires de itemID parmi slots ({ itemID, count, locked, group }) :
 -- pile incomplète du même objet, sinon emplacement libre d'un groupe (sac, onglet) qui contient
 -- l'objet, sinon premier libre. Renvoie l'emplacement et le nombre qui y tient, ou nil.
@@ -281,6 +352,7 @@ local function Finish(reason)
 	end
 	run.ticker:Cancel()
 	local done, total, skipped, full, used = run.done, run.total, run.skipped, run.full, run.used
+	local uniqueText = run.uniqueText or ""
 	run = nil
 	local counts = done .. " sur " .. total .. " objets déposés"
 	if reason == "closed" then
@@ -295,6 +367,7 @@ local function Finish(reason)
 	else
 		status = "|cff40ff40Les " .. done .. " objets ont été déposés dans " .. BanksText(used) .. ".|r"
 	end
+	status = status .. uniqueText -- objets uniques laissés dans les sacs (limite atteinte)
 	Notify()
 end
 
@@ -433,6 +506,14 @@ function ns.StartDeposit()
 			end
 		end
 	end
+	-- Objets uniques déjà à leur limite dans la banque de bataillon / de guilde : laissés dans les
+	-- sacs (voir UniqueLimit), comptés dans unique.
+	local uniqueCounts, unique = {}, 0
+	for kind in pairs(inBank) do
+		if kind ~= "K" then
+			uniqueCounts[kind] = UniqueCounts(kind, inBank[kind])
+		end
+	end
 	local queue = {}
 	for _, bag in ipairs(ns.BagIDs("B")) do
 		for slot = 1, C_Container.GetContainerNumSlots(bag) or 0 do
@@ -440,13 +521,19 @@ function ns.StartDeposit()
 			if info and info.itemID then
 				for _, kind in ipairs(kinds) do
 					if inBank[kind] and inBank[kind][info.itemID] and Allowed(kind, bag, slot, info) then
-						queue[#queue + 1] = { bag = bag, slot = slot, itemID = info.itemID, kind = kind }
+						if uniqueCounts[kind] and OverUniqueLimit(uniqueCounts[kind], info.itemID, info.stackCount or 1) then
+							unique = unique + 1
+						else
+							queue[#queue + 1] = { bag = bag, slot = slot, itemID = info.itemID, kind = kind }
+						end
 						break
 					end
 				end
 			end
 		end
 	end
+	local uniqueText = unique > 0 and (" " .. unique .. " objet(s) unique(s) laissé(s) dans les sacs : la banque "
+		.. "en contient déjà le maximum permis.") or ""
 	if #queue == 0 then
 		local accessible = {}
 		for kind in pairs(inBank) do
@@ -454,7 +541,8 @@ function ns.StartDeposit()
 		end
 		-- Aucun objet éligible : dit à l'écran aussi (le bouton « Ranger » de l'en-tête et le clic
 		-- droit sur « Data » n'ont pas de ligne d'état).
-		status = "Tous les objets ont déjà été déposés dans " .. BanksText(accessible) .. "."
+		status = (unique > 0 and "Rien à déposer." or ("Tous les objets ont déjà été déposés dans "
+			.. BanksText(accessible) .. ".")) .. uniqueText
 		if UIErrorsFrame then
 			UIErrorsFrame:AddMessage(status, 1, 0.82, 0)
 		end
@@ -462,7 +550,7 @@ function ns.StartDeposit()
 		return
 	end
 	run = { queue = queue, index = 1, done = 0, skipped = 0, total = #queue, since = GetTime(),
-		full = {}, used = {}, fullTabs = {} }
+		full = {}, used = {}, fullTabs = {}, uniqueText = uniqueText }
 	run.ticker = C_Timer.NewTicker(STEP_INTERVAL, Step)
 	Progress()
 	Notify()

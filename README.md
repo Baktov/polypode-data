@@ -115,6 +115,9 @@ banque ouverte, et seulement eux :
   **même onglet**, sinon ailleurs dans cette banque ;
 - un compteur suit l'avancement (« Rangement : 5 sur 30 ») jusqu'à « Les 30 objets ont été
   déposés dans la banque » (une pile des sacs compte pour un objet) ;
+- un objet **unique** (« Unique », « Unique (n) ») que la banque de bataillon ou de guilde contient
+  déjà au maximum permis reste dans les sacs, sans tentative de dépôt (le jeu le refuserait :
+  ces banques comptent à part), et c'est signalé à la fin ;
 - s'il n'y a plus de place pour un objet, il reste dans les sacs (les suivants peuvent encore
   compléter une pile existante) et c'est signalé à la fin ; le rangement s'arrête si la banque
   se ferme ; pendant le rangement, le bouton devient **Arrêter**.
@@ -170,6 +173,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 
 ## Version
 
+`1.14.3` : « Ranger » : un objet unique déjà présent au maximum permis dans la banque de bataillon ou de guilde reste dans les sacs (plus de dépôt refusé par le jeu, « vous ne pouvez pas en avoir plus ») ; signalé dans le bilan.
 `1.14.2` : détail d'un personnage : chaque banque sur deux lignes (nom et nombre d'objets, puis en gris la guilde, l'or et la date du relevé), lisibles sans être tronquées dans la fiche.
 `1.14.1` : correctif : l'or, le niveau d'objet et la guilde d'un personnage pouvaient être effacés à la déconnexion (relevé fait juste avant la sortie du monde, quand le jeu les a déjà vidés). Un relevé d'identité dont le niveau d'objet tombe à 0 est ignoré ; la guilde connue est gardée tant que le serveur n'a pas renvoyé son nom.
 `1.14.0` : tri du tableau par clic sur un en-tête (Personnage, Niveau, iLvl, Métiers, Or, Hauts faits, Temps de jeu, Vu) ; clic suivant : ordre inverse ; tri gardé.
