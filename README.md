@@ -170,7 +170,6 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 
 ## Version
 
-`1.9.1` : personnage supprimé dans Polypode (Maj + clic) : ses données relevées sont oubliées, ici et sur les autres clients connectés.
 `1.14.2` : détail d'un personnage : chaque banque sur deux lignes (nom et nombre d'objets, puis en gris la guilde, l'or et la date du relevé), lisibles sans être tronquées dans la fiche.
 `1.14.1` : correctif : l'or, le niveau d'objet et la guilde d'un personnage pouvaient être effacés à la déconnexion (relevé fait juste avant la sortie du monde, quand le jeu les a déjà vidés). Un relevé d'identité dont le niveau d'objet tombe à 0 est ignoré ; la guilde connue est gardée tant que le serveur n'a pas renvoyé son nom.
 `1.14.0` : tri du tableau par clic sur un en-tête (Personnage, Niveau, iLvl, Métiers, Or, Hauts faits, Temps de jeu, Vu) ; clic suivant : ordre inverse ; tri gardé.
@@ -191,6 +190,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 `1.10.2` : clic droit sur le bouton « Data » (fenêtre Polypode et colonne de la barre flottante) : ranger, comme le bouton « Ranger ».
 `1.10.1` : infobulle d'un personnage sans les rappels de clic en bas (« Clic gauche : épingler… », « Clic droit : oublier… »).
 `1.10.0` : banque de bataillon (par compte Battle.net) et banque de guilde (par guilde) : un seul relevé gardé, le plus récent remplace les autres au lieu de s'y ajouter (doublons des versions précédentes nettoyés) ; relevé ignoré tant que la banque n'est pas chargée ; clic droit sur les icônes sacs / banques : remise à zéro.
+`1.9.1` : personnage supprimé dans Polypode (Maj + clic) : ses données relevées sont oubliées, ici et sur les autres clients connectés.
 `1.9.0` : métiers sur deux colonnes (infobulle et fiche) ; fiche épinglée d'un personnage : équipement en icônes comme la fenêtre de personnage de WoW (infobulle de l'objet au survol).
 `1.8.3` : infobulle de « Ranger » : titre en jaune, résumé en bleu (« tout objet des sacs qui existe déjà dans une banque y est rangé »), puis le détail (en rouge si le bouton est grisé).
 `1.8.2` : bouton « Ranger » aussi dans la barre de titre, entre « Dépôts » et l'icône du sac.
