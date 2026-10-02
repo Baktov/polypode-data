@@ -1,5 +1,10 @@
 # CLAUDE.md — Polypode Data (Addon WoW)
 
+Conventions communes et procédure de documentation de tous les modules Polypode (chargées
+automatiquement, quel que soit le dossier ouvert) :
+
+@../Polypode/MODULES.md
+
 Addon compagnon de **Polypode** (dossier voisin `../Polypode`, dépôt séparé) : fenêtre « Données
 des personnages » (données durables de chaque personnage, façon DataStore / WoWthing). Les
 conventions de Polypode s'appliquent (voir `../Polypode/CLAUDE.md`) : commentaires en français,
@@ -31,15 +36,7 @@ donnée que si elle sert à gérer ses personnages.
 
 ## Après chaque modification
 
-Suivre la procédure commune de `../Polypode/CLAUDE.md` (section « Modules Polypode et
-documentation »), sans attendre qu'on le demande :
-
-1. incrémenter `## Version` du `.toc` et la rappeler à la fin du message de commit,
-   « Description (x.y.z) » ;
-2. `README.md` : ajouter `` `x.y.z` : description. `` en tête de la section « Version » (du plus
-   récent au plus ancien) et mettre à jour les sections d'utilisation concernées ;
-3. ce fichier : architecture (fichiers, fonctions, données, SavedVariables, messages) et liste
-   « Dépendances vers Polypode » si une nouvelle fonction `P.*` est utilisée ;
-4. si le périmètre du module change : section « Addons compagnons » du `README.md` de Polypode et
-   liste des compagnons de son `CLAUDE.md` (commit dans ce dépôt-là aussi) ;
-5. commiter puis pousser sur `origin` (https://github.com/Baktov/polypode-data).
+Appliquer la procédure de `../Polypode/MODULES.md` (« Après chaque modification d'un module »),
+sans attendre qu'on le demande : version du `.toc` et du commit, ligne en tête de la section
+« Version » du `README.md` et sections d'utilisation, ce fichier (architecture, dépendances),
+Polypode si le périmètre change, puis commit et push sur `origin` (https://github.com/Baktov/polypode-data).
