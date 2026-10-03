@@ -35,6 +35,12 @@ local function WindowSettings()
 	return PolypodeDataDB.window
 end
 
+-- Affichage du contenu d'un sac ou d'une banque (option « Contenu des sacs et banques ») :
+-- "list" (une ligne par objet) ou "icons" (grille d'icônes, comme les sacs de WoW).
+local function ContainerView()
+	return PolypodeDataDB and PolypodeDataDB.containerView or "list"
+end
+
 -- FORMATAGE ------------------------------------------------------------------------------------
 
 local function Icon(fileID, size)
@@ -500,9 +506,10 @@ local function ItemEnhancements(link)
 	return result
 end
 
--- Contenu d'un sac ou d'une banque : une ligne par objet (nom, nombre), triées par nom.
+-- Contenu d'un sac ou d'une banque : une ligne par objet (nom, nombre), triées par nom ; item et
+-- count servent à l'affichage en icônes (entries.items, voir GRILLE D'ICÔNES).
 local function ContainerEntries(data)
-	local entries = {}
+	local entries = { items = true }
 	for itemKey, count in pairs(data or {}) do
 		local itemID = tonumber(tostring(itemKey):match("^i(%d+)$"))
 		if itemID then
@@ -514,6 +521,8 @@ local function ContainerEntries(data)
 					ShowItem(itemID)
 				end,
 				hint = "Clic : infobulle de l'objet",
+				item = itemID,
+				count = tonumber(count) or 0,
 			}
 		end
 	end
@@ -1062,13 +1071,108 @@ local function FillGear(card, key)
 	end
 end
 
+-- GRILLE D'ICÔNES (option « icons ») : le contenu d'un sac ou d'une banque (lignes de
+-- ContainerEntries, entries.items) en icônes comme les sacs de WoW, GRID_COLUMNS par rangée ;
+-- chaque rangée est une ligne de la liste défilante de la fiche (P.CreateScrollList avec
+-- opts.rowHeight, Polypode 0.56.0). Nombre en bas à droite, bordure de qualité, infobulle de
+-- l'objet au survol, clic = infobulle épinglée (ShowItem).
+local GRID_ICON, GRID_GAP, GRID_COLUMNS = 36, 4, 10
+local GRID_CELL = GRID_ICON + GRID_GAP
+
+-- Nombre affiché sur une icône (abrégé au-delà de 9 999).
+local function ShortCount(count)
+	if count >= 10000 then
+		return math.floor(count / 1000) .. "k"
+	end
+	return count > 1 and tostring(count) or ""
+end
+
+local function CreateGridButton(parent)
+	local button = CreateFrame("Button", nil, parent)
+	button:SetSize(GRID_ICON, GRID_ICON)
+	button.icon = button:CreateTexture(nil, "ARTWORK")
+	button.icon:SetAllPoints()
+	button.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	button.border = button:CreateTexture(nil, "OVERLAY")
+	button.border:SetTexture("Interface\\Common\\WhiteIconFrame")
+	button.border:SetAllPoints()
+	button.count =button:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
+	button.count:SetPoint("BOTTOMRIGHT", -2, 2)
+	button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+	button:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:SetItemByID(self.item)
+		GameTooltip:AddLine("Clic : infobulle de l'objet", 0.6, 0.6, 0.6)
+		GameTooltip:Show()
+	end)
+	button:SetScript("OnLeave", GameTooltip_Hide)
+	button:SetScript("OnClick", function(self)
+		ShowItem(self.item)
+	end)
+	return button
+end
+
+-- Habille une rangée de la grille (lignes recyclées : boutons créés une fois, remplis à chaque
+-- affichage) ; data.items = entrées de ContainerEntries de cette rangée.
+local function FillGridRow(row, data)
+	row.icons = row.icons or {}
+	for index = 1, GRID_COLUMNS do
+		local entry = data.items[index]
+		local button = row.icons[index]
+		if entry and not button then
+			button = CreateGridButton(row)
+			button:SetPoint("LEFT", (index - 1) * GRID_CELL, 0)
+			row.icons[index] = button
+		end
+		if button then
+			button.item = entry and entry.item
+			button:SetShown(entry ~= nil)
+		end
+		if entry then
+			button.icon:SetTexture(ItemIcon(entry.item) or 134400) -- point d'interrogation à défaut
+			local quality = C_Item and C_Item.GetItemQualityByID and C_Item.GetItemQualityByID(entry.item)
+			-- Bordure à partir de « inhabituel » (vert), comme les sacs de WoW.
+			local color = quality and quality >= 2 and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality]
+			button.border:SetShown(color and true or false)
+			if color then
+				button.border:SetVertexColor(color.r, color.g, color.b)
+			end
+			button.count:SetText(ShortCount(entry.count))
+			if GameTooltip:IsOwned(button) then
+				button:GetScript("OnEnter")(button)
+			end
+		end
+	end
+end
+
+-- Lignes d'une fiche regroupées en rangées d'icônes.
+local function GridRows(entries)
+	local rows = {}
+	for index, entry in ipairs(entries) do
+		local rowIndex = math.floor((index - 1) / GRID_COLUMNS) + 1
+		rows[rowIndex] = rows[rowIndex] or { items = {} }
+		table.insert(rows[rowIndex].items, entry)
+	end
+	return rows
+end
+
 -- Remplit une fiche (titre et lignes) et ajuste sa hauteur à son contenu.
 local function FillCard(card)
 	local entries = card.build() or {}
 	local extra = card.action and CARD_STATUS_HEIGHT or 0
 	card.TitleText:SetText(card.title)
 	card.TitleText:SetPoint("RIGHT", card.action and card.actionButton or card.CloseButton, "LEFT", -4, 0)
-	local listHeight = math.max(#entries, 1) * CARD_ROW_HEIGHT + 16
+	-- Contenu d'un sac ou d'une banque en icônes (option) : liste en rangées d'icônes.
+	local grid = entries.items and ContainerView() == "icons" and card.gridPanel ~= nil
+	if card.gridPanel then
+		card.gridPanel:SetShown(grid)
+	end
+	card.panel:SetShown(not grid)
+	local listPanel = grid and card.gridPanel or card.panel
+	if grid then
+		entries = GridRows(entries)
+	end
+	local listHeight = math.max(#entries, 1) * (grid and GRID_CELL or CARD_ROW_HEIGHT) + 16
 	card.panel:ClearAllPoints()
 	FillGear(card, card.gearKey)
 	if card.gearKey then
@@ -1079,13 +1183,14 @@ local function FillCard(card)
 		card:SetHeight(40 + extra + math.max(GEAR_COLUMN_HEIGHT, math.min(listHeight, CARD_MAX_HEIGHT - 40))
 			+ GEAR_ICON + GEAR_MARGIN)
 	else
-		card.panel:SetPoint("TOPLEFT", 8, -32 - extra)
-		card.panel:SetPoint("BOTTOMRIGHT", -8, 8)
+		listPanel:ClearAllPoints()
+		listPanel:SetPoint("TOPLEFT", 8, -32 - extra)
+		listPanel:SetPoint("BOTTOMRIGHT", -8, 8)
 		card:SetHeight(math.min(CARD_MAX_HEIGHT, 40 + extra + listHeight))
 	end
 	UpdateCardAction(card)
-	P.SetListData(card.panel, entries)
-	card.panel.emptyText:SetText(card.empty or "Vide.")
+	P.SetListData(listPanel, entries)
+	listPanel.emptyText:SetText(card.empty or "Vide.")
 end
 
 local function CreateCard()
@@ -1244,6 +1349,19 @@ local function CreateCard()
 		end,
 	})
 	card.panel = panel
+
+	-- Grille d'icônes (option « icons ») : rangées hautes, seulement si Polypode règle la hauteur
+	-- des lignes (0.56.0) ; sinon le contenu reste en liste.
+	if P.LIST_ROW_HEIGHT then
+		local gridPanel = P.CreatePanel(card, "")
+		gridPanel:SetBackdropColor(0, 0, 0, 0)
+		gridPanel:SetBackdropBorderColor(0, 0, 0, 0)
+		P.CreateScrollList(gridPanel, function()
+			return ""
+		end, 6, { inset = 4, rowHeight = GRID_CELL, decorate = FillGridRow })
+		gridPanel:Hide()
+		card.gridPanel = gridPanel
+	end
 	P.SkinFrame(card)
 	cards[#cards + 1] = card
 	return card
@@ -2063,6 +2181,44 @@ itemEvents:SetScript("OnEvent", function()
 		refreshPending = nil
 		ns.Refresh()
 	end)
+end)
+
+-- OPTIONS : sous-catégorie « Data » du panneau de Polypode (P.optionsCategory, créée à son
+-- PLAYER_LOGIN), ou catégorie « Polypode Data » à part si elle manque.
+local function BuildSettingsPanel()
+	if not (Settings and Settings.RegisterProxySetting and Settings.CreateDropdown) then
+		return
+	end
+	local category
+	if P.optionsCategory and Settings.RegisterVerticalLayoutSubcategory then
+		category = Settings.RegisterVerticalLayoutSubcategory(P.optionsCategory, "Data")
+	else
+		category = Settings.RegisterVerticalLayoutCategory("Polypode Data")
+	end
+	local setting = Settings.RegisterProxySetting(category, "POLYPODE_DATA_CONTAINER_VIEW",
+		Settings.VarType.String, "Contenu des sacs et banques", "list",
+		ContainerView,
+		function(value)
+			PolypodeDataDB.containerView = value
+			RefreshCards()
+		end)
+	Settings.CreateDropdown(category, setting, function()
+		local container = Settings.CreateControlTextContainer()
+		container:Add("list", "Liste")
+		container:Add("icons", "Icônes")
+		return container:GetData()
+	end, "Affichage du contenu détaillé d'un sac ou d'une banque (clic sur sa ligne dans la fiche d'un "
+		.. "personnage, ou sur une icône de l'en-tête) : une ligne par objet avec son nom, ou une grille "
+		.. "d'icônes comme les sacs de WoW (nombre sur l'icône, nom dans l'infobulle). Réglage commun à "
+		.. "tous les personnages.")
+	Settings.RegisterAddOnCategory(category)
+end
+
+local settingsEvents = CreateFrame("Frame")
+settingsEvents:RegisterEvent("PLAYER_LOGIN")
+settingsEvents:SetScript("OnEvent", function()
+	-- Différé d'une image : Polypode crée P.optionsCategory à son propre PLAYER_LOGIN.
+	C_Timer.After(0, BuildSettingsPanel)
 end)
 
 -- INTÉGRATION À POLYPODE -------------------------------------------------------------------------

@@ -11,7 +11,7 @@ Nécessite **Polypode 0.51.1** ou plus récent.
 
 ## Installation
 
-1. Installer d'abord **Polypode** (dépendance obligatoire).
+1. Installer d'abord **Polypode** (dépendance obligatoire ; affichage en icônes : Polypode 0.56 ou plus).
 2. Placer le dossier `Polypode_Data` dans `World of Warcraft/_retail_/Interface/AddOns/`
    (et, pour **WoW Forever**, dans `World of Warcraft/_classic_beta_/Interface/AddOns/`, par
    exemple par une jonction `mklink /J`).
@@ -153,6 +153,14 @@ l'équipement de tous les personnages. Chaque ligne donne le total et, à droite
 (« Bataillon » pour la banque de bataillon, « Guilde … » pour une banque de guilde) ; l'infobulle précise où (sacs, banque, équipé). Les
 noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se complète seule.
 
+### Options
+
+Options → AddOns → Polypode → **Data** :
+
+| Option | Défaut | Effet |
+|---|---|---|
+| Contenu des sacs et banques | Liste | Affichage du contenu détaillé d'un sac ou d'une banque (clic sur sa ligne dans la fiche d'un personnage, ou sur une icône de l'en-tête) : **Liste** (une ligne par objet, avec son nom et son nombre) ou **Icônes** (grille d'icônes comme les sacs de WoW : nombre sur l'icône, bordure de la couleur de qualité, nom et détail dans l'infobulle, clic = infobulle épinglée). Réglage commun à tous les personnages |
+
 ---
 
 ## Fonctionnement
@@ -178,6 +186,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 
 ## Version
 
+`1.15.0` : option « Contenu des sacs et banques » (Options → AddOns → Polypode → Data) : contenu détaillé en liste ou en icônes comme les sacs de WoW. Nécessite Polypode 0.56 pour les icônes.
 `1.14.5` : fiche d'un personnage : chaque sac ou banque sur une seule ligne, la guilde, l'or et la date du relevé passent dans l'infobulle de la ligne (avec « Clic : contenu détaillé »).
 `1.14.4` : correctif « Ranger » : un dépôt refusé par le serveur (accepté d'abord par le jeu, puis l'objet revient dans le sac, ex. hachette de récolte en banque de bataillon) était retenté sans fin, message d'erreur en boucle. L'objet est maintenant laissé dans les sacs sans nouvelle tentative, et les objets refusés sont listés dans le chat (message local) à la fin.
 `1.14.3` : « Ranger » : un objet unique déjà présent au maximum permis dans la banque de bataillon ou de guilde reste dans les sacs (plus de dépôt refusé par le jeu, « vous ne pouvez pas en avoir plus ») ; signalé dans le bilan.
