@@ -1833,6 +1833,17 @@ local function ShowForgetMenu(key)
 	end)
 end
 
+-- Ouvre Options > AddOns > Polypode > Data (bouton Options de la fenêtre, clic droit sur le bouton
+-- « Data » de Polypode et de la barre flottante) ; ferme la fenêtre pour ne pas masquer le panneau.
+local function OpenDataOptions()
+	if settingsCategory and Settings and Settings.OpenToCategory then
+		if frame then
+			frame:Hide()
+		end
+		Settings.OpenToCategory(settingsCategory:GetID())
+	end
+end
+
 local function Build()
 	local settings = WindowSettings()
 	frame = CreateFrame("Frame", "PolypodeDataFrame", UIParent, "BackdropTemplate")
@@ -1863,12 +1874,7 @@ local function Build()
 	optionsBtn:SetSize(70, 20)
 	optionsBtn:SetPoint("TOPLEFT", 6, -3)
 	optionsBtn:SetText("Options")
-	optionsBtn:SetScript("OnClick", function()
-		if settingsCategory and Settings and Settings.OpenToCategory then
-			frame:Hide()
-			Settings.OpenToCategory(settingsCategory:GetID())
-		end
-	end)
+	optionsBtn:SetScript("OnClick", OpenDataOptions)
 	optionsBtn:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 		GameTooltip:AddLine("Options")
@@ -2249,7 +2255,8 @@ end)
 
 if P.AddTitleButton then
 	-- Clic droit (bouton de la fenêtre Polypode et celui de la colonne de la barre flottante) :
-	-- la même action que « Ranger » (DEPOSIT_ACTION) ; sans banque utilisable, la raison s'affiche.
+	-- options, comme les autres modules ; Maj + clic droit : la même action que « Ranger »
+	-- (DEPOSIT_ACTION) ; sans banque utilisable, la raison s'affiche.
 	P.AddTitleButton({
 		text = "Data",
 		width = 50,
@@ -2257,6 +2264,10 @@ if P.AddTitleButton then
 		onClick = function(_, mouseButton)
 			if mouseButton ~= "RightButton" then
 				P.ToggleData()
+				return
+			end
+			if not IsShiftKeyDown() then
+				OpenDataOptions()
 				return
 			end
 			if not ns.IsDepositRunning() then
@@ -2273,8 +2284,9 @@ if P.AddTitleButton then
 			"Données des personnages",
 			"Niveau, or, métiers, équipement, sacs et banques de tous vos personnages, avec recherche "
 				.. "d'objet (détail au survol d'un personnage).",
-			"Clic droit : ranger (comme le bouton « Ranger » : objets des sacs déjà présents dans la banque "
-				.. "ouverte) ; pendant le rangement, clic droit pour l'arrêter.",
+			"Clic droit : options de Polypode Data.",
+			"Maj + clic droit : ranger (comme le bouton « Ranger » : objets des sacs déjà présents dans la "
+				.. "banque ouverte) ; pendant le rangement, Maj + clic droit pour l'arrêter.",
 		},
 		onCreate = function(button)
 			P.ui.dataButton = button

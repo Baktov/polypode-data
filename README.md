@@ -105,8 +105,8 @@ son infobulle. Les banques doivent avoir été relevées (ouvertes une fois). La
 toute seule (butin, dépôt, données reçues) ; le bouton la referme.
 
 **Ranger** (en haut de la fiche, et aussi dans la barre de titre de la fenêtre, entre **Dépôts** et
-l'icône du sac : même bouton, même fonction ; ou **clic droit** sur le bouton **Data** de la fenêtre
-Polypode ou de la barre flottante) : dépose les objets des sacs qui se trouvent **déjà** dans une
+l'icône du sac : même bouton, même fonction ; ou **Maj + clic droit** sur le bouton **Data** de la
+fenêtre Polypode ou de la barre flottante, dont le simple clic droit ouvre les options) : dépose les objets des sacs qui se trouvent **déjà** dans une
 banque ouverte, et seulement eux :
 
 - destination : la **banque du personnage** si l'objet y est, sinon la **banque de bataillon**
@@ -187,6 +187,7 @@ la fenêtre, qui se ferme pour laisser voir le panneau) :
 
 ## Version
 
+`1.15.2` : clic droit sur le bouton « Data » (fenêtre Polypode et barre flottante) : options, comme les autres modules ; « Ranger » passe à Maj + clic droit.
 `1.15.1` : bouton « Options » à gauche de la barre de titre (Options → AddOns → Polypode → Data), comme dans Polypode et Suivi.
 `1.15.0` : option « Contenu des sacs et banques » (Options → AddOns → Polypode → Data) : contenu détaillé en liste ou en icônes comme les sacs de WoW. Nécessite Polypode 0.56 pour les icônes.
 `1.14.5` : fiche d'un personnage : chaque sac ou banque sur une seule ligne, la guilde, l'or et la date du relevé passent dans l'infobulle de la ligne (avec « Clic : contenu détaillé »).
