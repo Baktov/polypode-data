@@ -92,7 +92,7 @@ données sont partagées avec vos autres clients connectés.
 
 ### Dépôts possibles
 
-Le bouton **Dépôts** (à gauche de la barre de titre) ouvre une fiche (déplaçable, croix pour la
+Le bouton **Dépôts** (barre de titre, à droite du bouton **Options**) ouvre une fiche (déplaçable, croix pour la
 fermer) qui liste, **pour chaque personnage**, les objets de ses **sacs** qui existent **déjà**
 dans l'une de ses trois banques, et qui pourraient donc y être rangés :
 
@@ -155,7 +155,8 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 
 ### Options
 
-Options → AddOns → Polypode → **Data** :
+Options → AddOns → Polypode → **Data**, ou bouton **Options** (le plus à gauche de la barre de titre de
+la fenêtre, qui se ferme pour laisser voir le panneau) :
 
 | Option | Défaut | Effet |
 |---|---|---|
@@ -186,6 +187,7 @@ Options → AddOns → Polypode → **Data** :
 
 ## Version
 
+`1.15.1` : bouton « Options » à gauche de la barre de titre (Options → AddOns → Polypode → Data), comme dans Polypode et Suivi.
 `1.15.0` : option « Contenu des sacs et banques » (Options → AddOns → Polypode → Data) : contenu détaillé en liste ou en icônes comme les sacs de WoW. Nécessite Polypode 0.56 pour les icônes.
 `1.14.5` : fiche d'un personnage : chaque sac ou banque sur une seule ligne, la guilde, l'or et la date du relevé passent dans l'infobulle de la ligne (avec « Clic : contenu détaillé »).
 `1.14.4` : correctif « Ranger » : un dépôt refusé par le serveur (accepté d'abord par le jeu, puis l'objet revient dans le sac, ex. hachette de récolte en banque de bataillon) était retenté sans fin, message d'erreur en boucle. L'objet est maintenant laissé dans les sacs sans nouvelle tentative, et les objets refusés sont listés dans le chat (message local) à la fin.

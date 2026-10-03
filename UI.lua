@@ -13,13 +13,14 @@ local P = Polypode
 -- Colonnes ancrées au bord droit, à la largeur de leur plus long contenu (mesurée à chaque
 -- rafraîchissement) ; le nom prend la place restante (comme la fenêtre de Polypode Suivi).
 
-local MIN_WIDTH, MIN_HEIGHT = 640, 220 -- largeur : boutons, titre et deux champs de recherche
+local MIN_WIDTH, MIN_HEIGHT = 700, 220 -- largeur : boutons, titre et deux champs de recherche
 local SEARCH_WIDTH = 105 -- chaque champ de recherche (objets, recettes), côte à côte
 local DEFAULT_WIDTH, DEFAULT_HEIGHT = 820, 360
 local COLUMN_GAP = 14
 local MIN_SEARCH = 2 -- lettres avant de lancer la recherche
 
 local frame, listPanel, searchBox, recipeBox
+local settingsCategory -- sous-catégorie « Data » des options (BuildSettingsPanel), pour le bouton Options
 local columnWidths = {} -- largeurs des colonnes affichées (0 = masquée)
 local measure -- texte caché servant à mesurer les cellules
 local namesPending = false -- noms d'objets demandés au serveur (recherche, fiches)
@@ -1856,10 +1857,31 @@ local function Build()
 	frame:Hide()
 	tinsert(UISpecialFrames, "PolypodeDataFrame") -- Échap ferme la fenêtre
 
-	-- Bouton « Dépôts » à gauche, puis le titre ; le champ de recherche occupe la droite.
+	-- Bouton Options (le plus à gauche, comme dans les fenêtres Polypode et Suivi) : ouvre
+	-- Options > AddOns > Polypode > Data, et ferme la fenêtre pour ne pas masquer le panneau.
+	local optionsBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+	optionsBtn:SetSize(70, 20)
+	optionsBtn:SetPoint("TOPLEFT", 6, -3)
+	optionsBtn:SetText("Options")
+	optionsBtn:SetScript("OnClick", function()
+		if settingsCategory and Settings and Settings.OpenToCategory then
+			frame:Hide()
+			Settings.OpenToCategory(settingsCategory:GetID())
+		end
+	end)
+	optionsBtn:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:AddLine("Options")
+		GameTooltip:AddLine("Ouvre les options de Polypode Data (Options > AddOns > Polypode > Data).", 1, 1, 1, true)
+		GameTooltip:Show()
+	end)
+	optionsBtn:SetScript("OnLeave", GameTooltip_Hide)
+	P.ui.dataOptionsButton = optionsBtn
+
+	-- Bouton « Dépôts », puis le titre ; le champ de recherche occupe la droite.
 	local depositBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 	depositBtn:SetSize(70, 20)
-	depositBtn:SetPoint("TOPLEFT", 6, -3)
+	depositBtn:SetPoint("LEFT", optionsBtn, "RIGHT", 4, 0)
 	depositBtn:SetText("Dépôts")
 	depositBtn:SetScript("OnClick", ToggleDeposits)
 	depositBtn:SetScript("OnEnter", function(self)
@@ -2105,6 +2127,7 @@ local function Build()
 	P.SkinFrame(frame)
 	P.SkinPanel(listPanel)
 	if P.SkinButton then
+		P.SkinButton(optionsBtn)
 		P.SkinButton(depositBtn) -- les icônes gardent leur image
 		P.SkinButton(rangerButton)
 	end
@@ -2212,6 +2235,7 @@ local function BuildSettingsPanel()
 		.. "d'icônes comme les sacs de WoW (nombre sur l'icône, nom dans l'infobulle). Réglage commun à "
 		.. "tous les personnages.")
 	Settings.RegisterAddOnCategory(category)
+	settingsCategory = category
 end
 
 local settingsEvents = CreateFrame("Frame")
