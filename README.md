@@ -190,6 +190,7 @@ options** (nécessite Polypode 0.57 ; sinon le panneau d'options) :
 
 ## Version
 
+`1.16.1` : notions de clic en bleu dans les infobulles et la description de l'option (Polypode 0.60).
 `1.16.0` : clic droit sur le bouton « Data » : petite fenêtre d'options à côté du bouton (au lieu du panneau de WoW). Nécessite Polypode 0.57.
 `1.15.2` : clic droit sur le bouton « Data » (fenêtre Polypode et barre flottante) : options, comme les autres modules ; « Ranger » passe à Maj + clic droit.
 `1.15.1` : bouton « Options » à gauche de la barre de titre (Options → AddOns → Polypode → Data), comme dans Polypode et Suivi.

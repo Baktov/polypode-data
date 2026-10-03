@@ -3,6 +3,16 @@
 local _, ns = ...
 local P = Polypode
 
+-- Infobulles : notions de clic en bleu (règle commune, P.ShowTooltip de Polypode 0.59.1), sinon
+-- affichage simple.
+local function ShowTooltip()
+	if P.ShowTooltip then
+		P.ShowTooltip()
+	else
+		GameTooltip:Show()
+	end
+end
+
 -- Fenêtre PolypodeDataFrame (bouton « Data » de la fenêtre Polypode, /poly data) :
 --   * tableau sans trait de tous les personnages connus (le personnage joué en tête) : niveau,
 --     niveau d'objet, métiers principaux, or, temps de jeu, dernière connexion ; détail au survol
@@ -885,7 +895,7 @@ local function OwnContainerTooltip(owner, code)
 	else
 		GameTooltip:AddLine(container.missing, 0.6, 0.6, 0.6, true)
 	end
-	GameTooltip:Show()
+	ShowTooltip()
 end
 
 -- Clic droit : remise à zéro du relevé (ns.ResetSection, Data.lua) ; il faut rouvrir la banque
@@ -953,7 +963,7 @@ local function ShowActionTooltip(owner, anchor, tip)
 	else
 		GameTooltip:AddLine(tip[2], 1, 1, 1, true)
 	end
-	GameTooltip:Show()
+	ShowTooltip()
 end
 
 -- Bouton d'action et ligne d'état d'une fiche (card.action = { update(bouton, état), onClick,
@@ -997,7 +1007,7 @@ local function CreateGearButton(parent, slot)
 			GameTooltip:AddLine(_G[SLOT_NAMES[self.slot]] or ("Emplacement " .. self.slot))
 			GameTooltip:AddLine("Vide", 0.6, 0.6, 0.6)
 		end
-		GameTooltip:Show()
+		ShowTooltip()
 	end)
 	button:SetScript("OnLeave", GameTooltip_Hide)
 	button:SetScript("OnClick", function(self)
@@ -1105,7 +1115,7 @@ local function CreateGridButton(parent)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 		GameTooltip:SetItemByID(self.item)
 		GameTooltip:AddLine("Clic : infobulle de l'objet", 0.6, 0.6, 0.6)
-		GameTooltip:Show()
+		ShowTooltip()
 	end)
 	button:SetScript("OnLeave", GameTooltip_Hide)
 	button:SetScript("OnClick", function(self)
@@ -1321,7 +1331,7 @@ local function CreateCard()
 				row.rightButton:SetScript("OnEnter", function(self)
 					GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 					GameTooltip:AddLine("Clic : objets et recettes de ce métier", 1, 1, 1)
-					GameTooltip:Show()
+					ShowTooltip()
 				end)
 				row.rightButton:SetScript("OnLeave", GameTooltip_Hide)
 			end
@@ -1677,7 +1687,7 @@ local function CellHover(row, i)
 			if COLUMNS[self.column] and COLUMNS[self.column].sort then
 				GameTooltip:AddLine("Clic : trier par cette colonne (clic suivant : ordre inverse)", 0.6, 0.6, 0.6, true)
 			end
-			GameTooltip:Show()
+			ShowTooltip()
 		end)
 		hover:SetScript("OnLeave", GameTooltip_Hide)
 		row.cellHovers[i] = hover
@@ -1880,7 +1890,7 @@ local function Build()
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 		GameTooltip:AddLine("Options")
 		GameTooltip:AddLine("Ouvre les options de Polypode Data (Options > AddOns > Polypode > Data).", 1, 1, 1, true)
-		GameTooltip:Show()
+		ShowTooltip()
 	end)
 	optionsBtn:SetScript("OnLeave", GameTooltip_Hide)
 	P.ui.dataOptionsButton = optionsBtn
@@ -1896,7 +1906,7 @@ local function Build()
 		GameTooltip:AddLine("Dépôts possibles")
 		GameTooltip:AddLine("Pour chaque personnage, les objets de ses sacs qui existent déjà dans sa banque, "
 			.. "la banque de bataillon ou la banque de guilde, et qui pourraient y être déposés.", 1, 1, 1, true)
-		GameTooltip:Show()
+		ShowTooltip()
 	end)
 	depositBtn:SetScript("OnLeave", GameTooltip_Hide)
 	P.ui.dataDepositButton = depositBtn
@@ -2001,7 +2011,7 @@ local function Build()
 		GameTooltip:AddLine("Rechercher un objet")
 		GameTooltip:AddLine("Dès " .. MIN_SEARCH .. " lettres : objets des sacs, banques et équipements de "
 			.. "tous les personnages dont le nom contient le texte (sans accents ni majuscules).", 1, 1, 1, true)
-		GameTooltip:Show()
+		ShowTooltip()
 	end)
 	searchBox:HookScript("OnLeave", GameTooltip_Hide)
 
@@ -2022,7 +2032,7 @@ local function Build()
 		GameTooltip:AddLine("Dès " .. MIN_SEARCH .. " lettres : recettes apprises de tous les personnages en "
 			.. "mémoire dont le nom contient le texte (sans accents ni majuscules), avec qui les connaît. "
 			.. "Recettes relevées en ouvrant la fenêtre de chaque métier.", 1, 1, 1, true)
-		GameTooltip:Show()
+		ShowTooltip()
 	end)
 	recipeBox:HookScript("OnLeave", GameTooltip_Hide)
 
@@ -2237,6 +2247,7 @@ local function BuildSettingsPanel()
 		.. "d'un personnage, ou sur une icône de l'en-tête) : une ligne par objet avec son nom, ou une grille "
 		.. "d'icônes comme les sacs de WoW (nombre sur l'icône, nom dans l'infobulle). Réglage commun à "
 		.. "tous les personnages."
+	tooltip = P.ColorClicks and P.ColorClicks(tooltip) or tooltip -- clics en bleu
 	Settings.CreateDropdown(category, setting, function()
 		local container = Settings.CreateControlTextContainer()
 		for _, value in ipairs(values) do

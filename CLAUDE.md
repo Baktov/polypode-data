@@ -29,7 +29,7 @@ donnée que si elle sert à gérer ses personnages.
 `P.GetDisplayName`, `P.IsCharacterOnline`, `P.db.roster`, `P.SortedKeyItems`, `P.CreatePanel`,
 `P.CreateScrollList` (`opts.tooltip` renvoyant nil = pas d'infobulle : Polypode 0.51.1 ;
 `opts.rowHeight`, testé par `P.LIST_ROW_HEIGHT` : Polypode 0.56.0),
-`P.SetListData`, `P.SkinFrame`, `P.SkinPanel`, `P.SkinButton`, `P.optionsCategory` (sous-catégorie « Data »), `P.ToggleOptionsPopup` (si présente, Polypode 0.57.0).
+`P.SetListData`, `P.SkinFrame`, `P.SkinPanel`, `P.SkinButton`, `P.optionsCategory` (sous-catégorie « Data »), `P.ToggleOptionsPopup` (si présente, Polypode 0.57.0), `P.ShowTooltip` / `P.ColorClicks` (si présentes, Polypode 0.60.0 : clics en bleu dans les infobulles) ; toute infobulle par la locale `ShowTooltip`.
 
 ## Pistes
 
