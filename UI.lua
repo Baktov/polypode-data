@@ -21,6 +21,7 @@ local MIN_SEARCH = 2 -- lettres avant de lancer la recherche
 
 local frame, listPanel, searchBox, recipeBox
 local settingsCategory -- sous-catégorie « Data » des options (BuildSettingsPanel), pour le bouton Options
+local settingsPopup -- ses options pour la petite fenêtre du clic droit (P.ToggleOptionsPopup)
 local columnWidths = {} -- largeurs des colonnes affichées (0 = masquée)
 local measure -- texte caché servant à mesurer les cellules
 local namesPending = false -- noms d'objets demandés au serveur (recherche, fiches)
@@ -2231,17 +2232,23 @@ local function BuildSettingsPanel()
 			PolypodeDataDB.containerView = value
 			RefreshCards()
 		end)
+	local values = { { "list", "Liste" }, { "icons", "Icônes" } }
+	local tooltip = "Affichage du contenu détaillé d'un sac ou d'une banque (clic sur sa ligne dans la fiche "
+		.. "d'un personnage, ou sur une icône de l'en-tête) : une ligne par objet avec son nom, ou une grille "
+		.. "d'icônes comme les sacs de WoW (nombre sur l'icône, nom dans l'infobulle). Réglage commun à "
+		.. "tous les personnages."
 	Settings.CreateDropdown(category, setting, function()
 		local container = Settings.CreateControlTextContainer()
-		container:Add("list", "Liste")
-		container:Add("icons", "Icônes")
+		for _, value in ipairs(values) do
+			container:Add(value[1], value[2])
+		end
 		return container:GetData()
-	end, "Affichage du contenu détaillé d'un sac ou d'une banque (clic sur sa ligne dans la fiche d'un "
-		.. "personnage, ou sur une icône de l'en-tête) : une ligne par objet avec son nom, ou une grille "
-		.. "d'icônes comme les sacs de WoW (nombre sur l'icône, nom dans l'infobulle). Réglage commun à "
-		.. "tous les personnages.")
+	end, tooltip)
 	Settings.RegisterAddOnCategory(category)
 	settingsCategory = category
+	-- Même réglage dans la petite fenêtre du clic droit sur le bouton « Data » (Polypode 0.57.0).
+	settingsPopup = { key = "Data", title = "Options de Polypode Data", category = category,
+		items = { { kind = "dropdown", setting = setting, values = values, tooltip = tooltip } } }
 end
 
 local settingsEvents = CreateFrame("Frame")
@@ -2261,13 +2268,17 @@ if P.AddTitleButton then
 		text = "Data",
 		width = 50,
 		rightClick = true,
-		onClick = function(_, mouseButton)
+		onClick = function(button, mouseButton)
 			if mouseButton ~= "RightButton" then
 				P.ToggleData()
 				return
 			end
 			if not IsShiftKeyDown() then
-				OpenDataOptions()
+				if P.ToggleOptionsPopup and settingsPopup then
+					P.ToggleOptionsPopup(button, settingsPopup) -- petite fenêtre (Polypode 0.57.0)
+				else
+					OpenDataOptions()
+				end
 				return
 			end
 			if not ns.IsDepositRunning() then

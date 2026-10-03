@@ -106,7 +106,8 @@ toute seule (butin, dépôt, données reçues) ; le bouton la referme.
 
 **Ranger** (en haut de la fiche, et aussi dans la barre de titre de la fenêtre, entre **Dépôts** et
 l'icône du sac : même bouton, même fonction ; ou **Maj + clic droit** sur le bouton **Data** de la
-fenêtre Polypode ou de la barre flottante, dont le simple clic droit ouvre les options) : dépose les objets des sacs qui se trouvent **déjà** dans une
+fenêtre Polypode ou de la barre flottante, dont le simple clic droit ouvre une petite fenêtre
+d'options) : dépose les objets des sacs qui se trouvent **déjà** dans une
 banque ouverte, et seulement eux :
 
 - destination : la **banque du personnage** si l'objet y est, sinon la **banque de bataillon**
@@ -156,7 +157,9 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 ### Options
 
 Options → AddOns → Polypode → **Data**, ou bouton **Options** (le plus à gauche de la barre de titre de
-la fenêtre, qui se ferme pour laisser voir le panneau) :
+la fenêtre, qui se ferme pour laisser voir le panneau), ou **clic droit** sur le bouton **Data** (fenêtre
+Polypode ou barre flottante) : petite fenêtre d'options à côté du bouton, avec un bouton **Toutes les
+options** (nécessite Polypode 0.57 ; sinon le panneau d'options) :
 
 | Option | Défaut | Effet |
 |---|---|---|
@@ -187,6 +190,7 @@ la fenêtre, qui se ferme pour laisser voir le panneau) :
 
 ## Version
 
+`1.16.0` : clic droit sur le bouton « Data » : petite fenêtre d'options à côté du bouton (au lieu du panneau de WoW). Nécessite Polypode 0.57.
 `1.15.2` : clic droit sur le bouton « Data » (fenêtre Polypode et barre flottante) : options, comme les autres modules ; « Ranger » passe à Maj + clic droit.
 `1.15.1` : bouton « Options » à gauche de la barre de titre (Options → AddOns → Polypode → Data), comme dans Polypode et Suivi.
 `1.15.0` : option « Contenu des sacs et banques » (Options → AddOns → Polypode → Data) : contenu détaillé en liste ou en icônes comme les sacs de WoW. Nécessite Polypode 0.56 pour les icônes.
