@@ -424,7 +424,9 @@ end
 -- dans un cadre qui reste affiché, déplaçable (glisser) ; plusieurs à l'écran ; croix en haut à
 -- droite pour la fermer. Clic (gauche ou droit) sur une ligne marquée « » » : son détail (contenu
 -- d'un sac ou d'une banque dans une autre fiche, objet équipé dans l'infobulle d'objet de WoW).
--- Entrée d'une fiche : { text, detail = fonction appelée au clic, hint = texte d'aide }.
+-- Entrée d'une fiche : { text, detail = fonction appelée au clic, hint = texte d'aide, note =
+-- précision montrée dans l'infobulle de la ligne, avant hint (sur sa propre ligne dans
+-- l'infobulle d'un personnage) }.
 
 local CARD_WIDTH = 460
 local CARD_MAX_HEIGHT = 520
@@ -739,8 +741,8 @@ local function CharacterEntries(key, noEquipment)
 	end
 
 	local name = P.GetDisplayName(key)
-	-- Une banque par ligne (nom et nombre d'objets), précisions en gris sur la ligne suivante
-	-- (guilde, or, date du relevé) : sur une seule ligne, la fiche les tronquait.
+	-- Une banque par ligne (nom et nombre d'objets) ; précisions (guilde, or, date du relevé) dans
+	-- l'infobulle de la ligne (note), sur la ligne suivante dans l'infobulle du personnage.
 	local containers = {}
 	local function Counts(data)
 		local total, distinct = ContainerCount(data)
@@ -789,10 +791,7 @@ local function CharacterEntries(key, noEquipment)
 		Add("|cffffd200Sacs et banques|r")
 		for _, line in ipairs(containers) do
 			Add(line[1], line[2], "Clic : contenu détaillé")
-			if line[3] then
-				-- Même clic que la ligne de la banque, sans la marque « » ».
-				entries[#entries + 1] = { text = "      " .. line[3], detail = line[2], hint = "Clic : contenu détaillé" }
-			end
+			entries[#entries].note = line[3]
 		end
 		if not (entry and entry.t.K) then
 			Add("  " .. Gray("Banque : ouvrez-la une fois avec ce personnage pour la relever"))
@@ -922,6 +921,9 @@ local function CharacterTooltip(key)
 			lines[#lines + 1] = entry.text .. "     " .. entry.right
 		else
 			lines[#lines + 1] = entry.text
+		end
+		if entry.note then
+			lines[#lines + 1] = "      " .. entry.note
 		end
 	end
 	return lines
@@ -1178,6 +1180,9 @@ local function CreateCard()
 			end
 		end,
 		tooltip = function(data)
+			if data.note then
+				return { data.note, data.hint }
+			end
 			return data.hint and { data.hint } or nil
 		end,
 		-- Colonne de droite (data.right) dans la moitié droite de la ligne.

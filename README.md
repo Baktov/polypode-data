@@ -41,7 +41,8 @@ redimensionnable (poignée du coin bas-droit ; Échap ferme) :
   droite la ferme. Un **clic** (gauche ou droit) sur une ligne marquée « » » affiche son détail :
   contenu des **sacs**, de la **banque**, de la **banque de bataillon** ou de la **banque de
   guilde** (une fiche de plus, un
-  objet par ligne avec son nombre), ou l'**infobulle de l'objet** équipé (celle de WoW, épinglée, avec son
+  objet par ligne avec son nombre ; dans la fiche du personnage, chaque sac ou banque tient sur une
+  ligne, la guilde, l'or et la date du relevé sont dans son infobulle), ou l'**infobulle de l'objet** équipé (celle de WoW, épinglée, avec son
   enchantement, ses gemmes et ses bonus exacts).
   Dans une fiche de sac, un clic sur un objet affiche aussi son infobulle ;
 - **clic droit** sur un personnage : « Oublier ce personnage » (personnage supprimé, renommé...).
@@ -177,6 +178,7 @@ noms d'objets encore inconnus du jeu sont demandés au serveur, la liste se comp
 
 ## Version
 
+`1.14.5` : fiche d'un personnage : chaque sac ou banque sur une seule ligne, la guilde, l'or et la date du relevé passent dans l'infobulle de la ligne (avec « Clic : contenu détaillé »).
 `1.14.4` : correctif « Ranger » : un dépôt refusé par le serveur (accepté d'abord par le jeu, puis l'objet revient dans le sac, ex. hachette de récolte en banque de bataillon) était retenté sans fin, message d'erreur en boucle. L'objet est maintenant laissé dans les sacs sans nouvelle tentative, et les objets refusés sont listés dans le chat (message local) à la fin.
 `1.14.3` : « Ranger » : un objet unique déjà présent au maximum permis dans la banque de bataillon ou de guilde reste dans les sacs (plus de dépôt refusé par le jeu, « vous ne pouvez pas en avoir plus ») ; signalé dans le bilan.
 `1.14.2` : détail d'un personnage : chaque banque sur deux lignes (nom et nombre d'objets, puis en gris la guilde, l'or et la date du relevé), lisibles sans être tronquées dans la fiche.
