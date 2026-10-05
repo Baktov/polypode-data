@@ -190,6 +190,7 @@ options** (nécessite Polypode 0.57 ; sinon le panneau d'options) :
 
 ## Version
 
+`2.1.0` : fonction publique `P.GetCharacterData(clé, section)` : les autres modules (Polypode Suivi, fenêtre Grille) lisent l'identité et les métiers relevés.
 `2.0.0` : première version publique (release GitHub v2.0.0). Nécessite Polypode 2.0.0.
 `1.16.1` : notions de clic en bleu dans les infobulles et la description de l'option (Polypode 0.60).
 `1.16.0` : clic droit sur le bouton « Data » : petite fenêtre d'options à côté du bouton (au lieu du panneau de WoW). Nécessite Polypode 0.57.

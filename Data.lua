@@ -444,6 +444,22 @@ function ns.GetKeys()
 	return keys
 end
 
+-- API PUBLIQUE pour les autres modules (Polypode Suivi : fenêtre « Grille ») : copie d'une section
+-- enregistrée d'un personnage (« I », « T »... ; format en tête de ce fichier), ou nil. Copie :
+-- l'appelant ne peut pas modifier la sauvegarde.
+function P.GetCharacterData(key, section)
+	local entry = Entry(key)
+	local data = entry and entry.s and entry.s[section]
+	if not data then
+		return nil
+	end
+	local copy = {}
+	for k, v in pairs(data) do
+		copy[k] = v
+	end
+	return copy
+end
+
 -- Oublie un personnage (jamais le personnage joué).
 function ns.Forget(key)
 	if store and key ~= P.GetCharKey() then
