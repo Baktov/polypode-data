@@ -13,7 +13,7 @@ Nécessite **Polypode 0.51.1** ou plus récent.
 
 1. Installer d'abord **Polypode** (dépendance obligatoire ; affichage en icônes : Polypode 0.56 ou plus).
 2. Placer le dossier `Polypode_Data` dans `World of Warcraft/_retail_/Interface/AddOns/`
-   (et, pour **WoW Forever**, dans `World of Warcraft/_classic_beta_/Interface/AddOns/`, par
+   (et, pour **WoW Forever**, dans `World of Warcraft/_forever_/Interface/AddOns/`, par
    exemple par une jonction `mklink /J`).
 3. Cocher « Polypode Data » dans la liste des AddOns, **sur chaque personnage** : chacun relève
    ses propres données et les envoie aux autres.
