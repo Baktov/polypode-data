@@ -1,6 +1,7 @@
 -- Polypode Data: Deposit — rangement dans les banques des objets des sacs qui s'y trouvent déjà
 
 local _, ns = ...
+local L = ns.L
 
 -- Bouton « Ranger » de la fiche Dépôts (UI.lua) : chaque pile des sacs dont l'objet est déjà
 -- dans une banque accessible (relue en direct) y est déposée, une à la fois ; un objet absent
@@ -34,7 +35,8 @@ local BANK_KINDS = { "K", "A" } -- ordre de priorité des banques de destination
 local run
 local status -- texte d'avancement, affiché dans la fiche Dépôts
 
-local BANK_NAMES = { K = "banque", A = "banque de bataillon", G = "banque de guilde" }
+-- Noms des banques avec leur article, pour les phrases (« plus de place dans la banque »).
+local BANK_NAMES = { K = L["la banque"], A = L["la banque de bataillon"], G = L["la banque de guilde"] }
 
 local function Notify()
 	if ns.UpdateDepositControls then
@@ -127,12 +129,12 @@ end
 function ns.CanDeposit()
 	local open = ns.OpenBanks()
 	if open.G and (open.K or open.A) then
-		return false, "Une seule banque doit être ouverte : personnage, bataillon ou guilde."
+		return false, L["Une seule banque doit être ouverte : personnage, bataillon ou guilde."]
 	elseif open.G and not CanDepositInGuild() then
-		return false, "Vous n'avez le droit de déposer dans aucun onglet de cette banque de guilde."
+		return false, L["Vous n'avez le droit de déposer dans aucun onglet de cette banque de guilde."]
 	elseif not (open.K or open.A or open.G) then
-		return false, "Ouvrez la banque du personnage, la banque de bataillon ou la banque de guilde "
-			.. "(une seule banque ouverte à la fois)."
+		return false, L["Ouvrez la banque du personnage, la banque de bataillon ou la banque de guilde "
+			.. "(une seule banque ouverte à la fois)."]
 	end
 	return true
 end
@@ -331,7 +333,7 @@ end
 -- DÉROULEMENT --------------------------------------------------------------------------------
 
 local function Progress()
-	status = "Rangement : " .. run.done .. " sur " .. run.total
+	status = L["Rangement : %d sur %d"]:format(run.done, run.total)
 end
 
 -- « la banque », « la banque de bataillon » ou « la banque et la banque de bataillon ».
@@ -339,10 +341,13 @@ local function BanksText(set)
 	local names = {}
 	for _, kind in ipairs({ "K", "A", "G" }) do
 		if set[kind] then
-			names[#names + 1] = "la " .. BANK_NAMES[kind]
+			names[#names + 1] = BANK_NAMES[kind]
 		end
 	end
-	return table.concat(names, " et ")
+	if #names < 2 then
+		return names[1] or ""
+	end
+	return L["%s et %s"]:format(table.concat(names, ", ", 1, #names - 1), names[#names])
 end
 
 -- Fin du rangement ; reason : nil (terminé), "closed" ou "stopped".
@@ -358,25 +363,26 @@ local function Finish(reason)
 	-- Objets refusés par le serveur : listés dans le chat (message local, visible de vous seul),
 	-- avec leur lien cliquable ; exception voulue à « pas de print() » (demande de l'utilisateur).
 	if #refused > 0 and DEFAULT_CHAT_FRAME then
-		DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99Polypode Data|r : dépôt refusé par le jeu pour "
-			.. #refused .. " objet(s), laissé(s) dans les sacs : " .. table.concat(refused, ", "), 1, 0.5, 0.25)
+		DEFAULT_CHAT_FRAME:AddMessage(L["|cff33ff99Polypode Data|r : dépôt refusé par le jeu pour %d objet(s), laissé(s) "
+			.. "dans les sacs : %s"]:format(#refused, table.concat(refused, ", ")), 1, 0.5, 0.25)
 	end
-	local counts = done .. " sur " .. total .. " objets déposés"
+	local counts = L["%d sur %d objets déposés"]:format(done, total)
 	if reason == "closed" then
-		status = "|cffff4040Banque fermée|r : " .. counts .. "."
+		status = L["|cffff4040Banque fermée|r : %s."]:format(counts)
 	elseif reason == "stopped" then
-		status = "Arrêté : " .. counts .. "."
+		status = L["Arrêté : %s."]:format(counts)
 	elseif next(full) then
-		status = "|cffff4040Plus de place dans " .. BanksText(full) .. "|r : " .. counts .. "."
-		UIErrorsFrame:AddMessage("Polypode Data : plus de place dans " .. BanksText(full) .. ".", 1, 0.1, 0.1)
+		status = L["|cffff4040Plus de place dans %s|r : %s."]:format(BanksText(full), counts)
+		UIErrorsFrame:AddMessage(L["Polypode Data : plus de place dans %s."]:format(BanksText(full)), 1, 0.1, 0.1)
 	elseif skipped > 0 then
-		status = counts .. (next(used) and (" dans " .. BanksText(used)) or "") .. " (" .. skipped .. " non déposés)."
+		status = next(used) and L["%s dans %s (%d non déposés)."]:format(counts, BanksText(used), skipped)
+			or L["%s (%d non déposés)."]:format(counts, skipped)
 	else
-		status = "|cff40ff40Les " .. done .. " objets ont été déposés dans " .. BanksText(used) .. ".|r"
+		status = L["|cff40ff40Les %d objets ont été déposés dans %s.|r"]:format(done, BanksText(used))
 	end
 	status = status .. uniqueText -- objets uniques laissés dans les sacs (limite atteinte)
 	if #refused > 0 then
-		status = status .. " " .. #refused .. " refusé(s) par le jeu (liste dans le chat)."
+		status = status .. " " .. L["%d refusé(s) par le jeu (liste dans le chat)."]:format(#refused)
 	end
 	Notify()
 end
@@ -483,7 +489,7 @@ local function Step()
 	-- l'objet est noté pour le bilan et le rangement passe au suivant.
 	if entry.before then
 		if (info.stackCount or 1) >= entry.before then
-			run.refused[#run.refused + 1] = info.hyperlink or ("objet n° " .. entry.itemID)
+			run.refused[#run.refused + 1] = info.hyperlink or L["objet n° %s"]:format(entry.itemID)
 			return NextEntry(false)
 		end
 		entry.before = nil -- une partie est passée (pile partagée) : on continue avec le reste
@@ -554,8 +560,8 @@ function ns.StartDeposit()
 			end
 		end
 	end
-	local uniqueText = unique > 0 and (" " .. unique .. " objet(s) unique(s) laissé(s) dans les sacs : la banque "
-		.. "en contient déjà le maximum permis.") or ""
+	local uniqueText = unique > 0 and (" " .. L["%d objet(s) unique(s) laissé(s) dans les sacs : la banque en contient "
+		.. "déjà le maximum permis."]:format(unique)) or ""
 	if #queue == 0 then
 		local accessible = {}
 		for kind in pairs(inBank) do
@@ -563,8 +569,8 @@ function ns.StartDeposit()
 		end
 		-- Aucun objet éligible : dit à l'écran aussi (le bouton « Ranger » de l'en-tête et le clic
 		-- droit sur « Data » n'ont pas de ligne d'état).
-		status = (unique > 0 and "Rien à déposer." or ("Tous les objets ont déjà été déposés dans "
-			.. BanksText(accessible) .. ".")) .. uniqueText
+		status = (unique > 0 and L["Rien à déposer."]
+			or L["Tous les objets ont déjà été déposés dans %s."]:format(BanksText(accessible))) .. uniqueText
 		if UIErrorsFrame then
 			UIErrorsFrame:AddMessage(status, 1, 0.82, 0)
 		end

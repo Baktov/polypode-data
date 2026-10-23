@@ -188,8 +188,22 @@ options** (nécessite Polypode 0.57 ; sinon le panneau d'options) :
 
 ---
 
+## Langues (Languages)
+
+Polypode Data s'affiche dans la langue choisie dans Polypode (option « Langue / Language », `/poly langue`),
+par défaut celle du jeu : français, anglais, allemand, espagnol, italien ou portugais du Brésil
+(anglais pour une autre langue). Nécessite Polypode 2.9 pour choisir la langue ; avec un Polypode plus
+ancien, le module reste en français. La commande `C:/Program Files/Git/poly data` garde son nom.
+
+*Polypode Data follows the language chosen in Polypode ("Langue / Language" option, `/poly language`), by
+default the game's: French, English, German, Spanish, Italian or Brazilian Portuguese (English for any
+other language).*
+
+---
+
 ## Version
 
+`2.2.0` : Polypode Data en anglais, allemand, espagnol, italien et portugais du Brésil, selon la langue choisie dans Polypode ; termes du jeu de chaque langue (bataillon, banque de guilde...). *Translated into English, German, Spanish, Italian and Brazilian Portuguese.*
 `2.1.0` : fonction publique `P.GetCharacterData(clé, section)` : les autres modules (Polypode Suivi, fenêtre Grille) lisent l'identité et les métiers relevés.
 `2.0.0` : première version publique (release GitHub v2.0.0). Nécessite Polypode 2.0.0.
 `1.16.1` : notions de clic en bleu dans les infobulles et la description de l'option (Polypode 0.60).

@@ -2,6 +2,7 @@
 
 local _, ns = ...
 local P = Polypode -- dépendance obligatoire (## Dependencies: Polypode), chargée avant nous
+local L = ns.L
 
 -- Addon compagnon de Polypode, dans l'esprit de DataStore (Altoholic) ou WoWthing : les données
 -- durables de chaque personnage (identité, or, métiers, équipement, sacs et banques), gardées dans
@@ -474,7 +475,7 @@ if P.RegisterCharacterData then
 		name = "Polypode Data",
 		describe = function(key)
 			if store and store[key] then
-				return "niveau, or, métiers, équipement, sacs et banques relevés"
+				return L["niveau, or, métiers, équipement, sacs et banques relevés"]
 			end
 		end,
 		remove = function(key)

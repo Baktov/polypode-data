@@ -2,6 +2,7 @@
 
 local _, ns = ...
 local P = Polypode
+local L = ns.L
 
 -- Infobulles : notions de clic en bleu (règle commune, P.ShowTooltip de Polypode 0.59.1), sinon
 -- affichage simple.
@@ -120,9 +121,9 @@ local function FormatDuration(seconds)
 	seconds = math.floor(tonumber(seconds) or 0)
 	local days, hours = math.floor(seconds / 86400), math.floor(seconds % 86400 / 3600)
 	if days > 0 then
-		return days .. " j " .. hours .. " h"
+		return L["%d j %d h"]:format(days, hours)
 	end
-	return hours .. " h " .. math.floor(seconds % 3600 / 60) .. " min"
+	return L["%d h %d min"]:format(hours, math.floor(seconds % 3600 / 60))
 end
 
 -- « il y a 5 min », « il y a 3 h », « le 24/09 ».
@@ -133,19 +134,19 @@ local function FormatWhen(at)
 	end
 	local minutes = math.floor((GetServerTime() - at) / 60)
 	if minutes < 1 then
-		return "à l'instant"
+		return L["à l'instant"]
 	elseif minutes < 60 then
-		return "il y a " .. minutes .. " min"
+		return L["il y a %d min"]:format(minutes)
 	elseif minutes < 24 * 60 then
-		return "il y a " .. math.floor(minutes / 60) .. " h"
+		return L["il y a %d h"]:format(math.floor(minutes / 60))
 	end
-	return "le " .. date("%d/%m", at)
+	return L["le %s"]:format(date(L["%d/%m"], at))
 end
 
 -- Dernière connexion : « en ligne » (vert) ou la date où le personnage a été vu.
 local function SeenText(key)
 	if IsOnline(key) then
-		return "|cff40ff40en ligne|r"
+		return "|cff40ff40" .. L["en ligne"] .. "|r"
 	end
 	local _, entry = Sections(key)
 	return entry and entry.seen and FormatWhen(entry.seen) or ""
@@ -269,28 +270,28 @@ local function MainProfession(key, n)
 end
 
 local COLUMNS = {
-	{ "Niveau", function(key)
+	{ L["Niveau"], function(key)
 		local identity = Sections(key).I
 		return identity and identity.l and tostring(identity.l) or ""
 	end, sort = function(key)
 		return tonumber((Sections(key).I or {}).l)
-	end, tip = { "Niveau", "Niveau du personnage." } },
+	end, tip = { L["Niveau"], L["Niveau du personnage."] } },
 	{ "iLvl", function(key)
 		local identity = Sections(key).I
 		return identity and identity.i and tostring(identity.i) or ""
 	end, sort = function(key)
 		return tonumber((Sections(key).I or {}).i)
-	end, tip = { "Niveau d'objet", "Niveau d'objet moyen équipé." } },
+	end, tip = { L["Niveau d'objet"], L["Niveau d'objet moyen équipé."] } },
 	-- Métiers principaux : une colonne chacun, alignées à gauche (icônes les unes sous les autres) ;
 	-- la seconde sans en-tête, les deux se lisent comme un bloc « Métiers ».
-	{ "Métiers", function(key)
+	{ L["Métiers"], function(key)
 		local profession = MainProfession(key, 1)
 		return profession and (Icon(profession.icon) .. " " .. profession.level) or ""
 	end, sort = function(key)
 		local profession = MainProfession(key, 1)
 		return profession and profession.level
 	end, align = "LEFT",
-	tip = { "Métiers", "Métiers principaux et leur niveau (tous les métiers au survol d'un personnage)." } },
+	tip = { L["Métiers"], L["Métiers principaux et leur niveau (tous les métiers au survol d'un personnage)."] } },
 	{ "", function(key)
 		local profession = MainProfession(key, 2)
 		return profession and (Icon(profession.icon) .. " " .. profession.level) or ""
@@ -298,30 +299,30 @@ local COLUMNS = {
 		local profession = MainProfession(key, 2)
 		return profession and profession.level
 	end, align = "LEFT",
-	tip = { "Métiers", "Second métier principal et son niveau." } },
-	{ "Or", function(key)
+	tip = { L["Métiers"], L["Second métier principal et son niveau."] } },
+	{ L["Or"], function(key)
 		local identity = Sections(key).I
 		return identity and FormatGold(identity.g) or ""
 	end, sort = function(key)
 		return tonumber((Sections(key).I or {}).g)
-	end, tip = { "Or", "Or sur le personnage." } },
-	{ "Hauts faits", function(key)
+	end, tip = { L["Or"], L["Or sur le personnage."] } },
+	{ L["Hauts faits"], function(key)
 		local identity = Sections(key).I
 		return identity and identity.ap and tostring(identity.ap) or ""
 	end, sort = function(key)
 		return tonumber((Sections(key).I or {}).ap)
-	end, tip = { "Points de haut fait", "Points des hauts faits obtenus par ce personnage (pas le total du bataillon)." } },
-	{ "Temps de jeu", function(key)
+	end, tip = { L["Points de haut fait"], L["Points des hauts faits obtenus par ce personnage (pas le total du bataillon)."] } },
+	{ L["Temps de jeu"], function(key)
 		local seconds = PlayedSeconds(key)
 		return seconds and FormatDuration(seconds) or ""
-	end, sort = PlayedSeconds, tip = { "Temps de jeu", "Temps de jeu total (relevé à la connexion, puis compté)." } },
-	{ "Vu", SeenText, sort = function(key)
+	end, sort = PlayedSeconds, tip = { L["Temps de jeu"], L["Temps de jeu total (relevé à la connexion, puis compté)."] } },
+	{ L["Vu"], SeenText, sort = function(key)
 		if IsOnline(key) then
 			return math.huge -- en ligne : le plus récent
 		end
 		local _, entry = Sections(key)
 		return entry and tonumber(entry.seen)
-	end, tip = { "Dernière connexion", "« en ligne », ou quand le personnage a été vu connecté." } },
+	end, tip = { L["Dernière connexion"], L["« en ligne », ou quand le personnage a été vu connecté."] } },
 }
 
 -- TRI PAR COLONNE (clic sur un en-tête) : sortColumn = 0 (nom) ou n° de colonne, sortDesc =
@@ -528,11 +529,11 @@ local function ContainerEntries(data)
 			local name, colored = ItemName(itemID)
 			entries[#entries + 1] = {
 				sort = Normalize(name or ("~" .. itemID)),
-				text = Icon(ItemIcon(itemID)) .. " " .. (colored or ("objet n° " .. itemID)) .. Gray("  ×" .. count),
+				text = Icon(ItemIcon(itemID)) .. " " .. (colored or L["objet n° %s"]:format(itemID)) .. Gray("  ×" .. count),
 				detail = function()
 					ShowItem(itemID)
 				end,
-				hint = "Clic : infobulle de l'objet",
+				hint = L["Clic : infobulle de l'objet"],
 				item = itemID,
 				count = tonumber(count) or 0,
 			}
@@ -579,26 +580,26 @@ local function ProfessionEntries(key, professionSlot)
 		end
 	end
 	if not profession then
-		Add(Gray("Métier inconnu (plus relevé pour ce personnage)."))
+		Add(Gray(L["Métier inconnu (plus relevé pour ce personnage)."]))
 		return entries
 	end
 
-	Add("|cffffd200Objets de métier|r")
+	Add("|cffffd200" .. L["Objets de métier"] .. "|r")
 	local anyItem = false
 	for _, slot in ipairs(profession.gear) do
 		local itemID, level, link = EquippedItem(sections.E and sections.E[tostring(slot)])
 		if itemID then
 			anyItem = true
 			local _, colored = ItemName(itemID)
-			Add("  " .. Icon(ItemIcon(itemID)) .. " " .. (colored or ("objet n° " .. itemID))
+			Add("  " .. Icon(ItemIcon(itemID)) .. " " .. (colored or L["objet n° %s"]:format(itemID))
 				.. ((level or 0) > 0 and Gray(" " .. level) or ""), function()
 				ShowItem(link)
-			end, "Clic : infobulle de l'objet")
+			end, L["Clic : infobulle de l'objet"])
 		end
 	end
 	if not anyItem then
-		Add("  " .. Gray(#profession.gear > 0 and "Aucun objet équipé."
-			or "Pas encore relevés : reconnectez une fois ce personnage."))
+		Add("  " .. Gray(#profession.gear > 0 and L["Aucun objet équipé."]
+			or L["Pas encore relevés : reconnectez une fois ce personnage."]))
 	end
 
 	-- Recettes de ce métier, regroupées par métier d'extension.
@@ -608,7 +609,7 @@ local function ProfessionEntries(key, professionSlot)
 		local child = tonumber(tostring(itemKey):match("^c(%d+)$") or "")
 		local base, label = tostring(value):match("^(%d+)/(.*)$")
 		if child and tonumber(base) == profession.skillLine then
-			tiers[child] = { child = child, label = label ~= "" and label or ("n° " .. child), ids = {} }
+			tiers[child] = { child = child, label = label ~= "" and label or L["n° %s"]:format(child), ids = {} }
 		end
 	end
 	for itemKey, value in pairs(recipes) do
@@ -620,9 +621,9 @@ local function ProfessionEntries(key, professionSlot)
 		end
 	end
 	Add(" ")
-	Add("|cffffd200Recettes apprises|r" .. Gray(" (" .. count .. ")"))
+	Add("|cffffd200" .. L["Recettes apprises"] .. "|r" .. Gray(" (" .. count .. ")"))
 	if count == 0 then
-		Add("  " .. Gray("Pas encore relevées : ouvrez une fois la fenêtre de ce métier avec ce personnage."))
+		Add("  " .. Gray(L["Pas encore relevées : ouvrez une fois la fenêtre de ce métier avec ce personnage."]))
 		return entries
 	end
 	local order = {}
@@ -640,11 +641,11 @@ local function ProfessionEntries(key, professionSlot)
 		Add("|cffffd200" .. (open and "-" or "+") .. "|r " .. tier.label .. Gray(" (" .. #tier.ids .. ")"), function()
 			expandedTiers[stateKey] = not open or nil
 			ns.Refresh()
-		end, "Clic : " .. (open and "replier" or "déplier"), true)
+		end, open and L["Clic : replier"] or L["Clic : déplier"], true)
 		if open then
 			local rows = {}
 			for _, recipeID in ipairs(tier.ids) do
-				rows[#rows + 1] = { id = recipeID, name = SpellName(recipeID) or ("recette n° " .. recipeID) }
+				rows[#rows + 1] = { id = recipeID, name = SpellName(recipeID) or L["recette n° %s"]:format(recipeID) }
 			end
 			table.sort(rows, function(a, b)
 				return Normalize(a.name) < Normalize(b.name)
@@ -653,7 +654,7 @@ local function ProfessionEntries(key, professionSlot)
 				local icon = C_Spell and C_Spell.GetSpellTexture and C_Spell.GetSpellTexture(row.id)
 				Add("      " .. Icon(icon) .. " " .. row.name, function()
 					ShowSpell(row.id)
-				end, "Clic : infobulle de la recette")
+				end, L["Clic : infobulle de la recette"])
 			end
 		end
 	end
@@ -687,7 +688,7 @@ local function CharacterEntries(key, noEquipment)
 	local className = identity.c and LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[identity.c]
 	local who = {}
 	if identity.l then
-		who[#who + 1] = "Niveau " .. identity.l
+		who[#who + 1] = L["Niveau %s"]:format(identity.l)
 	end
 	who[#who + 1] = identity.r
 	who[#who + 1] = className
@@ -704,27 +705,27 @@ local function CharacterEntries(key, noEquipment)
 		Add(table.concat(place, " · "))
 	end
 	if identity.i then
-		Add("Niveau d'objet : " .. identity.i)
+		Add(L["Niveau d'objet : %s"]:format(identity.i))
 	end
 	if identity.g then
-		Add("Or : " .. FormatGold(identity.g))
+		Add(L["Or : %s"]:format(FormatGold(identity.g)))
 	end
 	local seconds = PlayedSeconds(key)
 	if seconds then
-		Add("Temps de jeu : " .. FormatDuration(seconds))
+		Add(L["Temps de jeu : %s"]:format(FormatDuration(seconds)))
 	end
-	Add("Vu : " .. SeenText(key))
+	Add(L["Vu : %s"]:format(SeenText(key)))
 
 	local professions = Professions(key)
 	if #professions > 0 then
 		Add(" ")
-		Add("|cffffd200Métiers|r")
+		Add("|cffffd200" .. L["Métiers"] .. "|r")
 		-- Deux colonnes : principaux côte à côte, puis secondaires deux par deux.
 		local function ProfessionText(profession)
-			return Icon(profession.icon) .. " " .. profession.name .. " : " .. profession.level .. "/" .. profession.max
+			return Icon(profession.icon) .. " " .. L["%s : %s/%s"]:format(profession.name, profession.level, profession.max)
 		end
 		-- Chaque métier ouvre sa fiche (objets, recettes) ; celui de droite par sa propre zone.
-		local hint = "Clic : objets et recettes de ce métier"
+		local hint = L["Clic : objets et recettes de ce métier"]
 		for i = 1, #professions, 2 do
 			local first, second = professions[i], professions[i + 1]
 			Add("  " .. ProfessionText(first), function()
@@ -737,7 +738,7 @@ local function CharacterEntries(key, noEquipment)
 
 	if sections.E and not noEquipment then
 		Add(" ")
-		Add("|cffffd200Équipement|r")
+		Add("|cffffd200" .. L["Équipement"] .. "|r")
 		for slot, global in ipairs(SLOT_NAMES) do
 			local itemID, level, link = EquippedItem(sections.E[tostring(slot)])
 			if itemID then
@@ -746,10 +747,10 @@ local function CharacterEntries(key, noEquipment)
 				local function ShowThis()
 					ShowItem(link)
 				end
-				Add("  " .. (_G[global] or ("Emplacement " .. slot)) .. " : " .. Icon(ItemIcon(itemID)) .. " "
-					.. (colored or ("objet n° " .. itemID)) .. ((level or 0) > 0 and Gray(" " .. level) or "")
+				Add("  " .. L["%s : %s"]:format(_G[global] or L["Emplacement %s"]:format(slot), Icon(ItemIcon(itemID))) .. " "
+					.. (colored or L["objet n° %s"]:format(itemID)) .. ((level or 0) > 0 and Gray(" " .. level) or "")
 					.. (extra.upgrade and Gray("  " .. extra.upgrade) or ""),
-					ShowThis, "Clic : infobulle de l'objet (enchantement, gemmes, améliorations)")
+					ShowThis, L["Clic : infobulle de l'objet (enchantement, gemmes, améliorations)"])
 				-- Enchantement et gemmes sous la pièce.
 				if extra.enchant then
 					Add("      |cff40ff40" .. extra.enchant .. "|r")
@@ -767,17 +768,17 @@ local function CharacterEntries(key, noEquipment)
 	local containers = {}
 	local function Counts(data)
 		local total, distinct = ContainerCount(data)
-		return " : " .. total .. " objets (" .. distinct .. " différents)"
+		return L[" : %d objets (%d différents)"]:format(total, distinct)
 	end
 	local function Read(at)
-		return "relevée " .. FormatWhen(at)
+		return L["relevée %s"]:format(FormatWhen(at))
 	end
-	for _, part in ipairs({ { "B", "Sacs" }, { "K", "Banque" } }) do
+	for _, part in ipairs({ { "B", L["Sacs"], L["Sacs de %s"] }, { "K", L["Banque"], L["Banque de %s"] } }) do
 		local data = sections[part[1]]
 		if data then
 			containers[#containers + 1] = { "  " .. part[2] .. Counts(data),
 				function()
-					OpenCard(part[2] .. " de " .. name, function()
+					OpenCard(part[3]:format(name), function()
 						return ContainerEntries((Sections(key))[part[1]])
 					end)
 				end, part[1] == "K" and entry and entry.t.K and Gray(Read(entry.t.K)) or nil }
@@ -786,9 +787,9 @@ local function CharacterEntries(key, noEquipment)
 	local bank = WarbandBanks()[AccountOf(key)]
 	if bank then
 		local account = AccountOf(key)
-		containers[#containers + 1] = { "  Banque de bataillon" .. Counts(bank.data),
+		containers[#containers + 1] = { "  " .. L["Banque de bataillon"] .. Counts(bank.data),
 			function()
-				OpenCard("Banque de bataillon", function()
+				OpenCard(L["Banque de bataillon"], function()
 					local current = WarbandBanks()[account]
 					return ContainerEntries(current and current.data)
 				end)
@@ -798,9 +799,9 @@ local function CharacterEntries(key, noEquipment)
 	local guildBank = guild and GuildBanks()[guild]
 	if guildBank then
 		local money = tonumber(guildBank.data.m)
-		containers[#containers + 1] = { "  Banque de guilde" .. Counts(guildBank.data),
+		containers[#containers + 1] = { "  " .. L["Banque de guilde"] .. Counts(guildBank.data),
 			function()
-				OpenCard("Banque de guilde " .. guild, function()
+				OpenCard(L["Banque de guilde %s"]:format(guild), function()
 					local current = GuildBanks()[guild]
 					return ContainerEntries(current and current.data)
 				end)
@@ -809,16 +810,16 @@ local function CharacterEntries(key, noEquipment)
 	end
 	if #containers > 0 then
 		Add(" ")
-		Add("|cffffd200Sacs et banques|r")
+		Add("|cffffd200" .. L["Sacs et banques"] .. "|r")
 		for _, line in ipairs(containers) do
-			Add(line[1], line[2], "Clic : contenu détaillé")
+			Add(line[1], line[2], L["Clic : contenu détaillé"])
 			entries[#entries].note = line[3]
 		end
 		if not (entry and entry.t.K) then
-			Add("  " .. Gray("Banque : ouvrez-la une fois avec ce personnage pour la relever"))
+			Add("  " .. Gray(L["Banque : ouvrez-la une fois avec ce personnage pour la relever"]))
 		end
 		if guild and not guildBank then
-			Add("  " .. Gray("Banque de guilde : ouvrez-la une fois (avec un personnage de la guilde) pour la relever"))
+			Add("  " .. Gray(L["Banque de guilde : ouvrez-la une fois (avec un personnage de la guilde) pour la relever"]))
 		end
 	end
 	return entries
@@ -842,37 +843,37 @@ local function OwnContainer(code)
 	local sections, entry = Sections(key)
 	if code == "B" or code == "K" then
 		return {
-			title = (code == "B" and "Sacs" or "Banque") .. " de " .. P.GetDisplayName(key),
+			title = (code == "B" and L["Sacs de %s"] or L["Banque de %s"]):format(P.GetDisplayName(key)),
 			data = sections[code],
 			version = entry and tonumber(entry.t[code]),
-			missing = code == "K" and "Banque pas encore relevée : ouvrez-la une fois avec ce personnage."
-				or "Sacs pas encore relevés.",
+			missing = code == "K" and L["Banque pas encore relevée : ouvrez-la une fois avec ce personnage."]
+				or L["Sacs pas encore relevés."],
 		}
 	elseif code == "A" then
 		local bank = WarbandBanks()[AccountOf(key)]
 		return {
-			title = "Banque de bataillon",
+			title = L["Banque de bataillon"],
 			data = bank and bank.data,
 			version = bank and bank.version,
-			missing = "Banque de bataillon pas encore relevée : ouvrez une fois une banque.",
+			missing = L["Banque de bataillon pas encore relevée : ouvrez une fois une banque."],
 		}
 	end
 	local guild = (sections.I or {}).gu
 	local bank = guild and GuildBanks()[guild]
 	return {
-		title = guild and ("Banque de guilde " .. guild) or "Banque de guilde",
+		title = guild and L["Banque de guilde %s"]:format(guild) or L["Banque de guilde"],
 		data = bank and bank.data,
 		version = bank and bank.version,
-		missing = guild and "Banque de guilde pas encore relevée : ouvrez-la une fois (avec un personnage de la guilde)."
-			or "Ce personnage n'a pas de guilde.",
+		missing = guild and L["Banque de guilde pas encore relevée : ouvrez-la une fois (avec un personnage de la guilde)."]
+			or L["Ce personnage n'a pas de guilde."],
 	}
 end
 
 local REOPEN_HINT_SHORT = {
-	B = "sacs relus aussitôt",
-	K = "à rouvrir pour la relever",
-	A = "à rouvrir pour la relever",
-	G = "à rouvrir pour la relever",
+	B = L["sacs relus aussitôt"],
+	K = L["à rouvrir pour la relever"],
+	A = L["à rouvrir pour la relever"],
+	G = L["à rouvrir pour la relever"],
 }
 
 -- Infobulle d'un bouton : nombre d'objets, d'objets différents, date du relevé.
@@ -882,16 +883,16 @@ local function OwnContainerTooltip(owner, code)
 	GameTooltip:AddLine(container.title)
 	if container.data then
 		local total, distinct = ContainerCount(container.data)
-		GameTooltip:AddLine(total .. " objets (" .. distinct .. " différents)", 1, 1, 1)
+		GameTooltip:AddLine(L["%d objets (%d différents)"]:format(total, distinct), 1, 1, 1)
 		local money = code == "G" and tonumber(container.data.m)
 		if money then
 			GameTooltip:AddLine(FormatGold(money), 1, 1, 1)
 		end
 		if container.version then
-			GameTooltip:AddLine("Relevé " .. FormatWhen(container.version), 0.6, 0.6, 0.6)
+			GameTooltip:AddLine(L["Relevé %s"]:format(FormatWhen(container.version)), 0.6, 0.6, 0.6)
 		end
-		GameTooltip:AddLine("Clic : contenu détaillé", 0.6, 0.6, 0.6)
-		GameTooltip:AddLine("Clic droit : remettre à zéro (" .. REOPEN_HINT_SHORT[code] .. ")", 0.6, 0.6, 0.6, true)
+		GameTooltip:AddLine(L["Clic : contenu détaillé"], 0.6, 0.6, 0.6)
+		GameTooltip:AddLine(L["Clic droit : remettre à zéro (%s)"]:format(REOPEN_HINT_SHORT[code]), 0.6, 0.6, 0.6, true)
 	else
 		GameTooltip:AddLine(container.missing, 0.6, 0.6, 0.6, true)
 	end
@@ -901,10 +902,10 @@ end
 -- Clic droit : remise à zéro du relevé (ns.ResetSection, Data.lua) ; il faut rouvrir la banque
 -- pour le relever de nouveau (les sacs sont relus aussitôt).
 local REOPEN_HINT = {
-	B = "Les sacs sont relus aussitôt.",
-	K = "Rouvrez la banque avec ce personnage pour la relever de nouveau.",
-	A = "Rouvrez une banque (avec un personnage de ce compte) pour relever de nouveau la banque de bataillon.",
-	G = "Rouvrez la banque de guilde pour la relever de nouveau.",
+	B = L["Les sacs sont relus aussitôt."],
+	K = L["Rouvrez la banque avec ce personnage pour la relever de nouveau."],
+	A = L["Rouvrez une banque (avec un personnage de ce compte) pour relever de nouveau la banque de bataillon."],
+	G = L["Rouvrez la banque de guilde pour la relever de nouveau."],
 }
 
 local function ShowOwnContainerMenu(owner, code)
@@ -914,10 +915,10 @@ local function ShowOwnContainerMenu(owner, code)
 	local container = OwnContainer(code)
 	MenuUtil.CreateContextMenu(owner, function(_, root)
 		root:CreateTitle(container.title)
-		root:CreateButton("Remettre à zéro", function()
+		root:CreateButton(L["Remettre à zéro"], function()
 			ns.ResetSection(code)
 			if UIErrorsFrame then
-				UIErrorsFrame:AddMessage(container.title .. " : relevé effacé. " .. REOPEN_HINT[code], 1, 0.82, 0)
+				UIErrorsFrame:AddMessage(L["%s : relevé effacé. %s"]:format(container.title, REOPEN_HINT[code]), 1, 0.82, 0)
 			end
 			ns.Refresh()
 		end)
@@ -1004,8 +1005,8 @@ local function CreateGearButton(parent, slot)
 		if self.link then
 			GameTooltip:SetHyperlink(self.link)
 		else
-			GameTooltip:AddLine(_G[SLOT_NAMES[self.slot]] or ("Emplacement " .. self.slot))
-			GameTooltip:AddLine("Vide", 0.6, 0.6, 0.6)
+			GameTooltip:AddLine(_G[SLOT_NAMES[self.slot]] or L["Emplacement %s"]:format(self.slot))
+			GameTooltip:AddLine(L["Vide"], 0.6, 0.6, 0.6)
 		end
 		ShowTooltip()
 	end)
@@ -1114,7 +1115,7 @@ local function CreateGridButton(parent)
 	button:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 		GameTooltip:SetItemByID(self.item)
-		GameTooltip:AddLine("Clic : infobulle de l'objet", 0.6, 0.6, 0.6)
+		GameTooltip:AddLine(L["Clic : infobulle de l'objet"], 0.6, 0.6, 0.6)
 		ShowTooltip()
 	end)
 	button:SetScript("OnLeave", GameTooltip_Hide)
@@ -1202,7 +1203,7 @@ local function FillCard(card)
 	end
 	UpdateCardAction(card)
 	P.SetListData(listPanel, entries)
-	listPanel.emptyText:SetText(card.empty or "Vide.")
+	listPanel.emptyText:SetText(card.empty or L["Vide."])
 end
 
 local function CreateCard()
@@ -1330,7 +1331,7 @@ local function CreateCard()
 				end)
 				row.rightButton:SetScript("OnEnter", function(self)
 					GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-					GameTooltip:AddLine("Clic : objets et recettes de ce métier", 1, 1, 1)
+					GameTooltip:AddLine(L["Clic : objets et recettes de ce métier"], 1, 1, 1)
 					ShowTooltip()
 				end)
 				row.rightButton:SetScript("OnLeave", GameTooltip_Hide)
@@ -1437,9 +1438,9 @@ local function DepositEntries()
 		local warband = warbands[AccountOf(key)]
 		local guildBank = identity.gu and guilds[identity.gu]
 		local targets = {
-			{ "Banque", sections.K },
-			{ "Banque de bataillon", warband and warband.data },
-			{ "Banque de guilde" .. (identity.gu and (" (" .. identity.gu .. ")") or ""), guildBank and guildBank.data },
+			{ L["Banque"], sections.K },
+			{ L["Banque de bataillon"], warband and warband.data },
+			{ L["Banque de guilde"] .. (identity.gu and (" (" .. identity.gu .. ")") or ""), guildBank and guildBank.data },
 		}
 		local block = {}
 		for _, target in ipairs(targets) do
@@ -1451,12 +1452,12 @@ local function DepositEntries()
 					local name, colored = ItemName(itemID)
 					lines[#lines + 1] = {
 						sort = Normalize(name or ("~" .. itemID)),
-						text = "      " .. Icon(ItemIcon(itemID)) .. " " .. (colored or ("objet n° " .. itemID))
-							.. " ×" .. count .. Gray("  (déjà " .. stored .. ")") .. DETAIL_MARK,
+						text = "      " .. Icon(ItemIcon(itemID)) .. " " .. (colored or L["objet n° %s"]:format(itemID))
+							.. " ×" .. count .. Gray("  " .. L["(déjà %s)"]:format(stored)) .. DETAIL_MARK,
 						detail = function()
 							ShowItem(itemID)
 						end,
-						hint = "Clic : infobulle de l'objet",
+						hint = L["Clic : infobulle de l'objet"],
 					}
 				end
 			end
@@ -1489,9 +1490,9 @@ end
 local DEPOSIT_ACTION = {
 	update = function(button, status)
 		local running = ns.IsDepositRunning()
-		button:SetText(running and "Arrêter" or "Ranger")
+		button:SetText(running and L["Arrêter"] or L["Ranger"])
 		button:SetEnabled(running or (ns.CanDeposit()) or false)
-		status:SetText(ns.GetDepositStatus() or Gray("Ranger : ouvrez une banque (personnage, bataillon ou guilde)."))
+		status:SetText(ns.GetDepositStatus() or Gray(L["Ranger : ouvrez une banque (personnage, bataillon ou guilde)."]))
 	end,
 	onClick = function()
 		if ns.IsDepositRunning() then
@@ -1501,18 +1502,18 @@ local DEPOSIT_ACTION = {
 		end
 	end,
 	tooltip = function()
-		local summary = "Tout objet des sacs qui existe déjà dans une banque y est rangé."
+		local summary = L["Tout objet des sacs qui existe déjà dans une banque y est rangé."]
 		if ns.IsDepositRunning() then
-			return { "Rangement en cours", "Clic : arrêter.", summary = summary }
+			return { L["Rangement en cours"], L["Clic : arrêter."], summary = summary }
 		end
 		local ok, reason = ns.CanDeposit()
 		if not ok then
-			return { "Ranger dans la banque", reason, summary = summary, error = true }
+			return { L["Ranger dans la banque"], reason, summary = summary, error = true }
 		end
-		return { "Ranger dans la banque", summary = summary, "Dépose les objets des sacs qui se trouvent déjà dans une banque "
+		return { L["Ranger dans la banque"], summary = summary, L["Dépose les objets des sacs qui se trouvent déjà dans une banque "
 			.. "ouverte, et seulement eux : dans la banque du personnage s'ils y sont, sinon dans la banque de "
 			.. "bataillon ; ou dans la banque de guilde (onglets où vous pouvez déposer) ; sur la pile "
-			.. "existante, sinon dans le même onglet, sinon ailleurs dans cette banque." }
+			.. "existante, sinon dans le même onglet, sinon ailleurs dans cette banque."] }
 	end,
 }
 
@@ -1545,8 +1546,8 @@ local function ToggleDeposits()
 		depositCard:Hide()
 		return
 	end
-	depositCard = OpenCard("Dépôts possibles", DepositEntries,
-		"Rien à déposer (ou banques pas encore relevées : ouvrez-les une fois).", DEPOSIT_ACTION)
+	depositCard = OpenCard(L["Dépôts possibles"], DepositEntries,
+		L["Rien à déposer (ou banques pas encore relevées : ouvrez-les une fois)."], DEPOSIT_ACTION)
 end
 
 -- RECHERCHE D'OBJETS ------------------------------------------------------------------------------
@@ -1619,11 +1620,11 @@ end
 
 local function HolderName(holderKey)
 	if holderKey:match("^warband:") then
-		return "|cff00ccffBataillon|r"
+		return "|cff00ccff" .. L["Bataillon"] .. "|r"
 	end
 	local guild = holderKey:match("^guild:(.+)$")
 	if guild then
-		return "|cff40ff40Guilde " .. guild .. "|r"
+		return "|cff40ff40" .. L["Guilde %s"]:format(guild) .. "|r"
 	end
 	return CharacterName(holderKey)
 end
@@ -1646,18 +1647,18 @@ local function ResultTooltip(result)
 		local holder = result.holders[holderKey]
 		local places = {}
 		if holder.B then
-			places[#places + 1] = "sacs " .. holder.B
+			places[#places + 1] = L["sacs %s"]:format(holder.B)
 		end
 		if holder.K then
-			places[#places + 1] = "banque " .. holder.K
+			places[#places + 1] = L["banque %s"]:format(holder.K)
 		end
 		if holder.E then
-			places[#places + 1] = "équipé"
+			places[#places + 1] = L["équipé"]
 		end
-		lines[#lines + 1] = HolderName(holderKey) .. " : " .. HolderCount(holder)
+		lines[#lines + 1] = L["%s : %s"]:format(HolderName(holderKey), HolderCount(holder))
 			.. (#places > 0 and not holder.A and Gray(" (" .. table.concat(places, ", ") .. ")") or "")
 	end
-	lines[#lines + 1] = "Total : " .. result.total
+	lines[#lines + 1] = L["Total : %s"]:format(result.total)
 	return lines
 end
 
@@ -1685,7 +1686,7 @@ local function CellHover(row, i)
 			GameTooltip:AddLine(self.tip[1])
 			GameTooltip:AddLine(self.tip[2], 1, 1, 1, true)
 			if COLUMNS[self.column] and COLUMNS[self.column].sort then
-				GameTooltip:AddLine("Clic : trier par cette colonne (clic suivant : ordre inverse)", 0.6, 0.6, 0.6, true)
+				GameTooltip:AddLine(L["Clic : trier par cette colonne (clic suivant : ordre inverse)"], 0.6, 0.6, 0.6, true)
 			end
 			ShowTooltip()
 		end)
@@ -1827,7 +1828,7 @@ local function RecipeTooltip(recipe)
 	for _, holder in ipairs(recipe.holders) do
 		lines[#lines + 1] = CharacterName(holder.key) .. (holder.label ~= "" and Gray("  " .. holder.label) or "")
 	end
-	lines[#lines + 1] = Gray("Clic : infobulle de la recette")
+	lines[#lines + 1] = Gray(L["Clic : infobulle de la recette"])
 	return lines
 end
 
@@ -1837,7 +1838,7 @@ local function ShowForgetMenu(key)
 	end
 	MenuUtil.CreateContextMenu(frame, function(_, root)
 		root:CreateTitle(P.GetDisplayName(key, true))
-		root:CreateButton("Oublier ce personnage", function()
+		root:CreateButton(L["Oublier ce personnage"], function()
 			ns.Forget(key)
 			ns.Refresh()
 		end)
@@ -1884,12 +1885,12 @@ local function Build()
 	local optionsBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 	optionsBtn:SetSize(70, 20)
 	optionsBtn:SetPoint("TOPLEFT", 6, -3)
-	optionsBtn:SetText("Options")
+	optionsBtn:SetText(L["Options"])
 	optionsBtn:SetScript("OnClick", OpenDataOptions)
 	optionsBtn:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		GameTooltip:AddLine("Options")
-		GameTooltip:AddLine("Ouvre les options de Polypode Data (Options > AddOns > Polypode > Data).", 1, 1, 1, true)
+		GameTooltip:AddLine(L["Options"])
+		GameTooltip:AddLine(L["Ouvre les options de Polypode Data (Options > AddOns > Polypode > Data)."], 1, 1, 1, true)
 		ShowTooltip()
 	end)
 	optionsBtn:SetScript("OnLeave", GameTooltip_Hide)
@@ -1899,13 +1900,13 @@ local function Build()
 	local depositBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 	depositBtn:SetSize(70, 20)
 	depositBtn:SetPoint("LEFT", optionsBtn, "RIGHT", 4, 0)
-	depositBtn:SetText("Dépôts")
+	depositBtn:SetText(L["Dépôts"])
 	depositBtn:SetScript("OnClick", ToggleDeposits)
 	depositBtn:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		GameTooltip:AddLine("Dépôts possibles")
-		GameTooltip:AddLine("Pour chaque personnage, les objets de ses sacs qui existent déjà dans sa banque, "
-			.. "la banque de bataillon ou la banque de guilde, et qui pourraient y être déposés.", 1, 1, 1, true)
+		GameTooltip:AddLine(L["Dépôts possibles"])
+		GameTooltip:AddLine(L["Pour chaque personnage, les objets de ses sacs qui existent déjà dans sa banque, "
+			.. "la banque de bataillon ou la banque de guilde, et qui pourraient y être déposés."], 1, 1, 1, true)
 		ShowTooltip()
 	end)
 	depositBtn:SetScript("OnLeave", GameTooltip_Hide)
@@ -1916,7 +1917,7 @@ local function Build()
 	rangerButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 	rangerButton:SetSize(70, 20)
 	rangerButton:SetPoint("LEFT", depositBtn, "RIGHT", 4, 0)
-	rangerButton:SetText("Ranger")
+	rangerButton:SetText(L["Ranger"])
 	rangerButton:SetMotionScriptsWhileDisabled(true)
 	rangerButton:SetScript("OnClick", function()
 		DEPOSIT_ACTION.onClick()
@@ -1981,7 +1982,7 @@ local function Build()
 	title:SetPoint("LEFT", previous, "RIGHT", 10, 0)
 	title:SetJustifyH("LEFT")
 	title:SetWordWrap(false) -- tronqué si la fenêtre est étroite
-	title:SetText("Données des personnages")
+	title:SetText(L["Données des personnages"])
 	frame.TitleText = title
 
 	local closeBtn = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
@@ -1998,7 +1999,7 @@ local function Build()
 	title:SetPoint("RIGHT", searchBox, "LEFT", -12, 0)
 	searchBox:SetAutoFocus(false)
 	if searchBox.Instructions then
-		searchBox.Instructions:SetText("Rech. objet")
+		searchBox.Instructions:SetText(L["Rech. objet"])
 	end
 	searchBox:HookScript("OnTextChanged", function(self, userInput)
 		if userInput and self:GetText() ~= "" and recipeBox and recipeBox:GetText() ~= "" then
@@ -2008,9 +2009,9 @@ local function Build()
 	end)
 	searchBox:HookScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
-		GameTooltip:AddLine("Rechercher un objet")
-		GameTooltip:AddLine("Dès " .. MIN_SEARCH .. " lettres : objets des sacs, banques et équipements de "
-			.. "tous les personnages dont le nom contient le texte (sans accents ni majuscules).", 1, 1, 1, true)
+		GameTooltip:AddLine(L["Rechercher un objet"])
+		GameTooltip:AddLine(L["Dès %d lettres : objets des sacs, banques et équipements de tous les personnages dont le nom "
+			.. "contient le texte (sans accents ni majuscules)."]:format(MIN_SEARCH), 1, 1, 1, true)
 		ShowTooltip()
 	end)
 	searchBox:HookScript("OnLeave", GameTooltip_Hide)
@@ -2018,7 +2019,7 @@ local function Build()
 	-- Recherche de recettes (créée plus haut, à droite de celle des objets).
 	recipeBox:SetAutoFocus(false)
 	if recipeBox.Instructions then
-		recipeBox.Instructions:SetText("Rech. recette")
+		recipeBox.Instructions:SetText(L["Rech. recette"])
 	end
 	recipeBox:HookScript("OnTextChanged", function(self, userInput)
 		if userInput and self:GetText() ~= "" and searchBox:GetText() ~= "" then
@@ -2028,10 +2029,10 @@ local function Build()
 	end)
 	recipeBox:HookScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
-		GameTooltip:AddLine("Rechercher une recette")
-		GameTooltip:AddLine("Dès " .. MIN_SEARCH .. " lettres : recettes apprises de tous les personnages en "
-			.. "mémoire dont le nom contient le texte (sans accents ni majuscules), avec qui les connaît. "
-			.. "Recettes relevées en ouvrant la fenêtre de chaque métier.", 1, 1, 1, true)
+		GameTooltip:AddLine(L["Rechercher une recette"])
+		GameTooltip:AddLine(L["Dès %d lettres : recettes apprises de tous les personnages en mémoire dont le nom contient "
+			.. "le texte (sans accents ni majuscules), avec qui les connaît. Recettes relevées en ouvrant la fenêtre de "
+			.. "chaque métier."]:format(MIN_SEARCH), 1, 1, 1, true)
 		ShowTooltip()
 	end)
 	recipeBox:HookScript("OnLeave", GameTooltip_Hide)
@@ -2071,7 +2072,7 @@ local function Build()
 
 	P.CreateScrollList(listPanel, function(data)
 		if data.columnHeader then
-			return "|cffffd200Personnage|r" .. SortMark(0)
+			return "|cffffd200" .. L["Personnage"] .. "|r" .. SortMark(0)
 		elseif data.result then
 			return Icon(ItemIcon(data.result.itemID)) .. " " .. data.result.colored
 				.. Gray("  ×" .. data.result.total)
@@ -2104,7 +2105,7 @@ local function Build()
 		end,
 		tooltip = function(data)
 			if data.columnHeader then
-				return { "Personnage", "Clic : trier par nom (clic suivant : ordre inverse)" }
+				return { L["Personnage"], L["Clic : trier par nom (clic suivant : ordre inverse)"] }
 			elseif data.result then
 				return ResultTooltip(data.result)
 			elseif data.recipe then
@@ -2166,23 +2167,23 @@ function ns.Refresh()
 		for _, recipe in ipairs(SearchRecipes(recipeQuery)) do
 			items[#items + 1] = { recipe = recipe }
 		end
-		header = "Recherche de recette « " .. recipeQuery .. " » : " .. #items .. " recette(s)"
-			.. (namesPending and Gray("  · chargement des noms…") or "")
-		emptyText = "Aucune recette trouvée (recettes relevées en ouvrant la fenêtre de chaque métier)."
+		header = L["Recherche de recette « %s » : %d recette(s)"]:format(recipeQuery, #items)
+			.. (namesPending and Gray("  · " .. L["chargement des noms…"]) or "")
+		emptyText = L["Aucune recette trouvée (recettes relevées en ouvrant la fenêtre de chaque métier)."]
 	elseif searching then
 		wipe(columnWidths)
 		items = {}
 		for _, result in ipairs(SearchItems(query)) do
 			items[#items + 1] = { result = result }
 		end
-		header = "Recherche « " .. query .. " » : " .. #items .. " objet(s)"
-			.. (namesPending and Gray("  · chargement des noms…") or "")
-		emptyText = "Aucun objet trouvé."
+		header = L["Recherche « %s » : %d objet(s)"]:format(query, #items)
+			.. (namesPending and Gray("  · " .. L["chargement des noms…"]) or "")
+		emptyText = L["Aucun objet trouvé."]
 	else
 		items = BuildCharacterItems()
 		local count = #items - 1
-		header = count .. " personnage(s)  " .. Gray("· or total : ") .. FormatGold(TotalGold())
-		emptyText = "Aucune donnée enregistrée."
+		header = L["%d personnage(s)"]:format(count) .. "  " .. Gray(L["· or total :"]) .. " " .. FormatGold(TotalGold())
+		emptyText = L["Aucune donnée enregistrée."]
 	end
 	listPanel.header:SetText(header)
 	listPanel.emptyText:SetText(emptyText)
@@ -2231,22 +2232,22 @@ local function BuildSettingsPanel()
 	end
 	local category
 	if P.optionsCategory and Settings.RegisterVerticalLayoutSubcategory then
-		category = Settings.RegisterVerticalLayoutSubcategory(P.optionsCategory, "Data")
+		category = Settings.RegisterVerticalLayoutSubcategory(P.optionsCategory, L["Data"])
 	else
 		category = Settings.RegisterVerticalLayoutCategory("Polypode Data")
 	end
 	local setting = Settings.RegisterProxySetting(category, "POLYPODE_DATA_CONTAINER_VIEW",
-		Settings.VarType.String, "Contenu des sacs et banques", "list",
+		Settings.VarType.String, L["Contenu des sacs et banques"], "list",
 		ContainerView,
 		function(value)
 			PolypodeDataDB.containerView = value
 			RefreshCards()
 		end)
-	local values = { { "list", "Liste" }, { "icons", "Icônes" } }
-	local tooltip = "Affichage du contenu détaillé d'un sac ou d'une banque (clic sur sa ligne dans la fiche "
+	local values = { { "list", L["Liste"] }, { "icons", L["Icônes"] } }
+	local tooltip = L["Affichage du contenu détaillé d'un sac ou d'une banque (clic sur sa ligne dans la fiche "
 		.. "d'un personnage, ou sur une icône de l'en-tête) : une ligne par objet avec son nom, ou une grille "
 		.. "d'icônes comme les sacs de WoW (nombre sur l'icône, nom dans l'infobulle). Réglage commun à "
-		.. "tous les personnages."
+		.. "tous les personnages."]
 	tooltip = P.ColorClicks and P.ColorClicks(tooltip) or tooltip -- clics en bleu
 	Settings.CreateDropdown(category, setting, function()
 		local container = Settings.CreateControlTextContainer()
@@ -2258,7 +2259,7 @@ local function BuildSettingsPanel()
 	Settings.RegisterAddOnCategory(category)
 	settingsCategory = category
 	-- Même réglage dans la petite fenêtre du clic droit sur le bouton « Data » (Polypode 0.57.0).
-	settingsPopup = { key = "Data", title = "Options de Polypode Data", category = category,
+	settingsPopup = { key = "Data", title = L["Options de Polypode Data"], category = category,
 		items = { { kind = "dropdown", setting = setting, values = values, tooltip = tooltip } } }
 end
 
@@ -2276,7 +2277,7 @@ if P.AddTitleButton then
 	-- options, comme les autres modules ; Maj + clic droit : la même action que « Ranger »
 	-- (DEPOSIT_ACTION) ; sans banque utilisable, la raison s'affiche.
 	P.AddTitleButton({
-		text = "Data",
+		text = L["Data"],
 		width = 50,
 		rightClick = true,
 		onClick = function(button, mouseButton)
@@ -2303,12 +2304,12 @@ if P.AddTitleButton then
 			ns.UpdateDepositControls()
 		end,
 		tooltip = {
-			"Données des personnages",
-			"Niveau, or, métiers, équipement, sacs et banques de tous vos personnages, avec recherche "
-				.. "d'objet (détail au survol d'un personnage).",
-			"Clic droit : options de Polypode Data.",
-			"Maj + clic droit : ranger (comme le bouton « Ranger » : objets des sacs déjà présents dans la "
-				.. "banque ouverte) ; pendant le rangement, Maj + clic droit pour l'arrêter.",
+			L["Données des personnages"],
+			L["Niveau, or, métiers, équipement, sacs et banques de tous vos personnages, avec recherche "
+				.. "d'objet (détail au survol d'un personnage)."],
+			L["Clic droit : options de Polypode Data."],
+			L["Maj + clic droit : ranger (comme le bouton « Ranger » : objets des sacs déjà présents dans la "
+				.. "banque ouverte) ; pendant le rangement, Maj + clic droit pour l'arrêter."],
 		},
 		onCreate = function(button)
 			P.ui.dataButton = button
@@ -2317,5 +2318,5 @@ if P.AddTitleButton then
 end
 
 if P.RegisterSlashCommand then
-	P.RegisterSlashCommand("data", P.ToggleData, "données des personnages (or, métiers, équipement, sacs, banques)")
+	P.RegisterSlashCommand("data", P.ToggleData, L["données des personnages (or, métiers, équipement, sacs, banques)"])
 end

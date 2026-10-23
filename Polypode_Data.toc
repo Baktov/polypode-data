@@ -1,12 +1,19 @@
 ## Interface: 120000, 16001
 ## Title: Polypode Data
-## Notes: Données des personnages pour Polypode : niveau, or, métiers, équipement, sacs et banques, avec recherche d'objet.
+## Notes: Character data for Polypode: level, gold, professions, equipment, bags and banks, with item search.
+## Notes-frFR: Données des personnages pour Polypode : niveau, or, métiers, équipement, sacs et banques, avec recherche d'objet.
 ## Author: Baktov
-## Version: 2.1.0
+## Version: 2.2.0
 ## Dependencies: Polypode
 ## SavedVariables: PolypodeDataDB
 ## Category: Polypode
 
+Locale.lua
+Locales/enUS.lua
+Locales/deDE.lua
+Locales/esES.lua
+Locales/itIT.lua
+Locales/ptBR.lua
 Data.lua
 Deposit.lua
 UI.lua
