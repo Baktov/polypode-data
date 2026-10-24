@@ -49,9 +49,22 @@ local function WindowSettings()
 end
 
 -- Affichage du contenu d'un sac ou d'une banque (option « Contenu des sacs et banques ») :
--- "list" (une ligne par objet) ou "icons" (grille d'icônes, comme les sacs de WoW).
+-- "list" (une ligne par objet), "icons" (grille d'icônes, comme les sacs de WoW) ou "baganator"
+-- (fenêtre de Baganator, voir BAGANATOR ; grille d'icônes pour ce qu'il ne connaît pas).
 local function ContainerView()
 	return PolypodeDataDB and PolypodeDataDB.containerView or "list"
+end
+
+-- Baganator chargé avec ses fenêtres (Baganator.CallbackRegistry) et Syndicator (ses relevés).
+local function HasBaganator()
+	return Baganator ~= nil and Baganator.CallbackRegistry ~= nil and Syndicator ~= nil
+		and Syndicator.API ~= nil and Syndicator.API.GetByCharacterFullName ~= nil
+end
+
+-- Grille d'icônes : option « Icônes », ou « Baganator » quand il ne peut pas afficher.
+local function IconView()
+	local view = ContainerView()
+	return view == "icons" or view == "baganator"
 end
 
 -- FORMATAGE ------------------------------------------------------------------------------------
@@ -251,6 +264,64 @@ local function GuildBanks()
 		end
 	end
 	return banks
+end
+
+-- BAGANATOR (option « Baganator ») : le contenu s'ouvre dans la vraie fenêtre de Baganator, comme
+-- ses propres résultats de recherche (ItemViewCommon/Search.lua de Baganator : événements BagShow,
+-- BankShow, GuildShow de Baganator.CallbackRegistry, hors de son API documentée, donc sous pcall).
+-- Baganator ne connaît que les relevés de Syndicator (personnages joués sur ce PC, banque de
+-- bataillon de ce compte) : sinon, la fiche de Polypode Data en icônes.
+
+-- Nom Syndicator « Nom-RoyaumeNormalisé » (royaume sans espaces ni tirets) d'une clé de Polypode
+-- « Nom-Royaume », ou nil s'il ne le connaît pas.
+local function SyndicatorCharacter(key)
+	if key == P.GetCharKey() and Syndicator.API.GetCurrentCharacter then
+		return Syndicator.API.GetCurrentCharacter()
+	end
+	local name, realm = key:match("^([^%-]+)%-(.+)$")
+	local full = name and (name .. "-" .. realm:gsub("[%s%-]", ""))
+	return full and Syndicator.API.GetByCharacterFullName(full) and full or nil
+end
+
+-- Nom Syndicator « Guilde-RoyaumeNormalisé » de la guilde d'un personnage, ou nil.
+local function SyndicatorGuild(key, guild)
+	local current = Syndicator.API.GetCurrentGuild and Syndicator.API.GetCurrentGuild()
+	if current and guild == (Sections(P.GetCharKey()).I or {}).gu then
+		return current
+	end
+	local realm = key:match("^[^%-]+%-(.+)$")
+	local full = realm and (guild .. "-" .. realm:gsub("[%s%-]", ""))
+	return full and Syndicator.API.GetByGuildFullName and Syndicator.API.GetByGuildFullName(full) and full or nil
+end
+
+-- Ouvre dans Baganator le sac / la banque `code` (B, K, A, G) du personnage `key` ; renvoie vrai
+-- si Baganator l'affiche (option choisie, relevé connu de Syndicator, appel réussi).
+local function OpenInBaganator(code, key, guild)
+	if ContainerView() ~= "baganator" or not HasBaganator() then
+		return false
+	end
+	local hide, event, entity
+	if code == "B" or code == "K" then
+		entity = SyndicatorCharacter(key)
+		hide, event = code == "B" and "BankHide" or "BagHide", code == "B" and "BagShow" or "BankShow"
+	elseif code == "A" then
+		-- Syndicator n'a que la banque de bataillon du compte joué (index 1).
+		local ownAccount = AccountOf(key) == AccountOf(P.GetCharKey())
+		entity = ownAccount and Syndicator.API.GetWarband and Syndicator.API.GetWarband(1) and 1 or nil
+		hide, event = "BagHide", "BankShow"
+	elseif code == "G" and guild then
+		entity = SyndicatorGuild(key, guild)
+		hide, event = "BankHide", "GuildShow"
+	end
+	if not entity then
+		return false
+	end
+	return (pcall(function()
+		local registry = Baganator.CallbackRegistry
+		registry:TriggerEvent("GuildHide")
+		registry:TriggerEvent(hide)
+		registry:TriggerEvent(event, entity)
+	end))
 end
 
 -- TABLEAU DES PERSONNAGES -----------------------------------------------------------------------
@@ -778,6 +849,9 @@ local function CharacterEntries(key, noEquipment)
 		if data then
 			containers[#containers + 1] = { "  " .. part[2] .. Counts(data),
 				function()
+					if OpenInBaganator(part[1], key) then
+						return
+					end
 					OpenCard(part[3]:format(name), function()
 						return ContainerEntries((Sections(key))[part[1]])
 					end)
@@ -789,6 +863,9 @@ local function CharacterEntries(key, noEquipment)
 		local account = AccountOf(key)
 		containers[#containers + 1] = { "  " .. L["Banque de bataillon"] .. Counts(bank.data),
 			function()
+				if OpenInBaganator("A", key) then
+					return
+				end
 				OpenCard(L["Banque de bataillon"], function()
 					local current = WarbandBanks()[account]
 					return ContainerEntries(current and current.data)
@@ -801,6 +878,9 @@ local function CharacterEntries(key, noEquipment)
 		local money = tonumber(guildBank.data.m)
 		containers[#containers + 1] = { "  " .. L["Banque de guilde"] .. Counts(guildBank.data),
 			function()
+				if OpenInBaganator("G", key, guild) then
+					return
+				end
 				OpenCard(L["Banque de guilde %s"]:format(guild), function()
 					local current = GuildBanks()[guild]
 					return ContainerEntries(current and current.data)
@@ -928,6 +1008,10 @@ end
 -- Clic : fiche épinglée du contenu (relue à chaque rafraîchissement).
 local function OpenOwnContainer(code)
 	local container = OwnContainer(code)
+	local key = P.GetCharKey()
+	if container.data and OpenInBaganator(code, key, (Sections(key).I or {}).gu) then
+		return
+	end
 	OpenCard(container.title, function()
 		return ContainerEntries(OwnContainer(code).data)
 	end, container.missing)
@@ -1176,7 +1260,7 @@ local function FillCard(card)
 	card.TitleText:SetText(card.title)
 	card.TitleText:SetPoint("RIGHT", card.action and card.actionButton or card.CloseButton, "LEFT", -4, 0)
 	-- Contenu d'un sac ou d'une banque en icônes (option) : liste en rangées d'icônes.
-	local grid = entries.items and ContainerView() == "icons" and card.gridPanel ~= nil
+	local grid = entries.items and IconView() and card.gridPanel ~= nil
 	if card.gridPanel then
 		card.gridPanel:SetShown(grid)
 	end
@@ -2248,6 +2332,12 @@ local function BuildSettingsPanel()
 		.. "d'un personnage, ou sur une icône de l'en-tête) : une ligne par objet avec son nom, ou une grille "
 		.. "d'icônes comme les sacs de WoW (nombre sur l'icône, nom dans l'infobulle). Réglage commun à "
 		.. "tous les personnages."]
+	-- Choix « Baganator » seulement s'il est chargé (option gardée sinon : grille d'icônes).
+	if HasBaganator() then
+		values[#values + 1] = { "baganator", "Baganator" }
+		tooltip = tooltip .. "\n\n" .. L["Baganator : ouvre sa propre fenêtre pour les personnages qu'il connaît "
+			.. "(joués sur ce PC) ; les autres s'affichent en icônes."]
+	end
 	tooltip = P.ColorClicks and P.ColorClicks(tooltip) or tooltip -- clics en bleu
 	Settings.CreateDropdown(category, setting, function()
 		local container = Settings.CreateControlTextContainer()

@@ -170,7 +170,7 @@ options** (nécessite Polypode 0.57 ; sinon le panneau d'options) :
 
 | Option | Défaut | Effet |
 |---|---|---|
-| Contenu des sacs et banques | Liste | Affichage du contenu détaillé d'un sac ou d'une banque (clic sur sa ligne dans la fiche d'un personnage, ou sur une icône de l'en-tête) : **Liste** (une ligne par objet, avec son nom et son nombre) ou **Icônes** (grille d'icônes comme les sacs de WoW : nombre sur l'icône, bordure de la couleur de qualité, nom et détail dans l'infobulle, clic = infobulle épinglée). Réglage commun à tous les personnages |
+| Contenu des sacs et banques | Liste | Affichage du contenu détaillé d'un sac ou d'une banque (clic sur sa ligne dans la fiche d'un personnage, ou sur une icône de l'en-tête) : **Liste** (une ligne par objet, avec son nom et son nombre) ou **Icônes** (grille d'icônes comme les sacs de WoW : nombre sur l'icône, bordure de la couleur de qualité, nom et détail dans l'infobulle, clic = infobulle épinglée) ou, si [Baganator](https://www.curseforge.com/wow/addons/baganator) est installé, **Baganator** (le clic ouvre la fenêtre de Baganator, comme à l'ouverture des sacs, pour les personnages qu'il connaît — ceux joués sur ce PC, la banque de bataillon de ce compte, leurs banques de guilde ; les autres s'affichent en icônes). Réglage commun à tous les personnages |
 
 ---
 
@@ -210,6 +210,7 @@ other language).*
 
 ## Version
 
+`2.3.0` : option « Contenu des sacs et banques » : choix **Baganator** (si installé), qui ouvre les sacs et banques dans la fenêtre de Baganator pour les personnages qu'il connaît, en icônes sinon.
 `2.2.0` : Polypode Data en anglais, allemand, espagnol, italien et portugais du Brésil, selon la langue choisie dans Polypode ; termes du jeu de chaque langue (bataillon, banque de guilde...). *Translated into English, German, Spanish, Italian and Brazilian Portuguese.*
 `2.1.0` : fonction publique `P.GetCharacterData(clé, section)` : les autres modules (Polypode Suivi, fenêtre Grille) lisent l'identité et les métiers relevés.
 `2.0.0` : première version publique (release GitHub v2.0.0). Nécessite Polypode 2.0.0.

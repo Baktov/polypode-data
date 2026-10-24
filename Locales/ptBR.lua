@@ -158,6 +158,7 @@ P.AddTranslations(ns.L, "ptBR", {
 	["Liste"] = "Lista",
 	["Icônes"] = "Ícones",
 	["Affichage du contenu détaillé d'un sac ou d'une banque (clic sur sa ligne dans la fiche d'un personnage, ou sur une icône de l'en-tête) : une ligne par objet avec son nom, ou une grille d'icônes comme les sacs de WoW (nombre sur l'icône, nom dans l'infobulle). Réglage commun à tous les personnages."] = "Exibição do conteúdo detalhado de uma bolsa ou banco (clique na linha dele na ficha de um personagem, ou em um ícone do cabeçalho): uma linha por item com o nome dele, ou uma grade de ícones como as bolsas do WoW (quantidade no ícone, nome na dica). Configuração comum a todos os personagens.",
+	["Baganator : ouvre sa propre fenêtre pour les personnages qu'il connaît (joués sur ce PC) ; les autres s'affichent en icônes."] = "Baganator: abre a própria janela para os personagens que ele conhece (jogados neste PC); os outros aparecem como ícones.",
 	["Options de Polypode Data"] = "Opções do Polypode Data",
 	["Niveau, or, métiers, équipement, sacs et banques de tous vos personnages, avec recherche d'objet (détail au survol d'un personnage)."] = "Nível, ouro, profissões, equipamento, bolsas e bancos de todos os seus personagens, com busca de itens (detalhes ao passar o mouse sobre um personagem).",
 	["Clic droit : options de Polypode Data."] = "Clique direito: opções do Polypode Data.",

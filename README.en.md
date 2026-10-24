@@ -158,7 +158,7 @@ Polypode 0.57; otherwise the options panel):
 
 | Option | Default | Effect |
 |---|---|---|
-| Bag and bank content | List | Display of the detailed content of a bag or bank (click on its line in a character's sheet, or on an icon of the header): **List** (one line per item, with its name and count) or **Icons** (grid of icons like WoW bags: count on the icon, border in quality color, name and details in the tooltip, click = pinned tooltip). Setting shared by all characters |
+| Bag and bank content | List | Display of the detailed content of a bag or bank (click on its line in a character's sheet, or on an icon of the header): **List** (one line per item, with its name and count) or **Icons** (grid of icons like WoW bags: count on the icon, border in quality color, name and details in the tooltip, click = pinned tooltip) or, if [Baganator](https://www.curseforge.com/wow/addons/baganator) is installed, **Baganator** (the click opens Baganator's window, as when opening your bags, for the characters it knows — those played on this PC, this account's warband bank, their guild banks; the others are shown as icons). Setting shared by all characters |
 
 ---
 
