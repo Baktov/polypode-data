@@ -210,6 +210,7 @@ other language).*
 
 ## Version
 
+`2.4.0` : fichier de race enregistré (indépendant de la langue et du genre), pour la Matrice de Polypode Suivi.
 `2.3.0` : option « Contenu des sacs et banques » : choix **Baganator** (si installé), qui ouvre les sacs et banques dans la fenêtre de Baganator pour les personnages qu'il connaît, en icônes sinon.
 `2.2.0` : Polypode Data en anglais, allemand, espagnol, italien et portugais du Brésil, selon la langue choisie dans Polypode ; termes du jeu de chaque langue (bataillon, banque de guilde...). *Translated into English, German, Spanish, Italian and Brazilian Portuguese.*
 `2.1.0` : fonction publique `P.GetCharacterData(clé, section)` : les autres modules (Polypode Suivi, fenêtre Grille) lisent l'identité et les métiers relevés.

@@ -112,7 +112,9 @@ local function ReadIdentity()
 	local data = {}
 	local _, classFile = UnitClass("player")
 	data.c = classFile
-	data.r = Clean(UnitRace("player"))
+	local raceName, raceFile = UnitRace("player")
+	data.r = Clean(raceName)
+	data.rf = raceFile -- fichier de race (sans langue ni genre : matrice de Polypode Suivi)
 	data.l = UnitLevel("player")
 	if GetAverageItemLevel then
 		local _, equipped = GetAverageItemLevel()
