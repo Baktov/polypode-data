@@ -1940,16 +1940,20 @@ local function OpenDataOptions()
 	end
 end
 
--- TEMPS DE JEU PAR CLASSE (icône à gauche de la recherche d'objet ; même présentation que
--- l'addon AccountPlayed) : temps de jeu de tous les personnages connus (PlayedSeconds), additionné
--- par classe, une barre à la couleur de la classe (longueur relative à la première), part du total
--- et durée ; total en bas, case « Jours » (jours, sinon heures). Survol d'une classe = ses
--- personnages, clic = fiche épinglée de ces personnages (clic sur l'un = sa fiche). Taille,
--- position et case dans PolypodeDataDB.played.
+-- TEMPS DE JEU PAR CLASSE OU PAR RACE (icône à gauche de la recherche d'objet ; même présentation
+-- que l'addon AccountPlayed) : temps de jeu des personnages connus (PlayedSeconds), additionné par
+-- classe ou par race (liste « Par »), pour tous les comptes WoW nommés dans Polypode ou un seul
+-- (liste « Compte ») ; une barre à la couleur de la classe (race : de sa faction, or si elle peut
+-- être des deux), longueur relative à la première, part du total et durée ; total en bas, case
+-- « Jours » (jours, sinon heures). Survol d'un groupe = ses personnages, clic = fiche épinglée de
+-- ces personnages (clic sur l'un = sa fiche). Taille, position, case et choix dans
+-- PolypodeDataDB.played.
 local PLAYED_ICON = "Interface\\Icons\\INV_Misc_PocketWatch_01"
-local PLAYED_MIN_WIDTH, PLAYED_MIN_HEIGHT = 420, 200
-local PLAYED_CLASS_WIDTH = 140 -- nom de classe (« Chevalier de la mort »...)
+local PLAYED_MIN_WIDTH, PLAYED_MIN_HEIGHT = 420, 220
+local PLAYED_LABEL_WIDTH = 140 -- nom de classe ou de race (« Chevalier de la mort »...)
 local PLAYED_VALUE_WIDTH = 100 -- « 99.9%  999 j »
+local NO_ACCOUNT = "~none" -- choix « Compte non renseigné » (comme les groupes de Polypode)
+local NEUTRAL_COLOR = { r = 1, g = 0.82, b = 0 }
 local playedFrame, playedPanel
 
 local function PlayedSettings()
@@ -1971,27 +1975,111 @@ local function FormatPlayed(seconds, total)
 	return L["%d j"]:format(days)
 end
 
-local function ClassLabel(classFile)
-	return (LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[classFile]) or L["Inconnue"]
+local function PlayedGroupBy()
+	return PlayedSettings().groupBy == "race" and "race" or "class"
 end
 
-local function ClassColor(classFile)
-	local color = C_ClassColor and C_ClassColor.GetClassColor(classFile)
-	return color or { r = 1, g = 1, b = 1 }
+-- Compte choisi : nil = tous ; un nom disparu (compte renommé, vidé) revient à tous.
+local function PlayedAccount()
+	local account = PlayedSettings().account
+	if not account or account == NO_ACCOUNT or not P.GetAccountLabels then
+		return P.GetCharacterAccount and account or nil
+	end
+	for _, label in ipairs(P.GetAccountLabels()) do
+		if label == account then
+			return account
+		end
+	end
+	return nil
 end
 
--- Classes triées du plus joué au moins joué : { class, time, chars = { { key, time } } } (personnages
--- triés de même), total, nombre de personnages au temps connu.
-local function PlayedByClass()
-	local byClass, total, count = {}, 0, 0
+local function InAccount(key, account)
+	if not account then
+		return true
+	end
+	local label = P.GetCharacterAccount(key)
+	if account == NO_ACCOUNT then
+		return not label or label == ""
+	end
+	return label == account
+end
+
+-- Races du jeu par fichier de race : nom dans la langue du client et faction (nil si la race existe
+-- dans plusieurs factions : pandaren, dracthyr...). Lu une fois, identifiants 1 à 150.
+local races
+local function RaceInfo(raceFile)
+	if not races then
+		races = {}
+		if C_CreatureInfo and C_CreatureInfo.GetRaceInfo then
+			for raceID = 1, 150 do
+				local ok, info = pcall(C_CreatureInfo.GetRaceInfo, raceID)
+				local file = ok and info and info.clientFileString
+				if file then
+					local factionOk, faction = false, nil
+					if C_CreatureInfo.GetFactionInfo then
+						factionOk, faction = pcall(C_CreatureInfo.GetFactionInfo, raceID)
+					end
+					local tag = factionOk and faction and faction.groupTag or "Neutral"
+					local race = races[file]
+					if not race then
+						races[file] = { name = info.raceName, faction = tag }
+					elseif race.faction ~= tag then
+						race.faction = nil
+					end
+				end
+			end
+		end
+	end
+	return races[raceFile]
+end
+
+local function GroupLabel(groupBy, group, fallback)
+	if group == "UNKNOWN" then
+		return L["Inconnue"]
+	elseif groupBy == "race" then
+		local race = RaceInfo(group)
+		return race and race.name or fallback or group
+	end
+	return (LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[group]) or group
+end
+
+local function GroupColor(groupBy, group)
+	if groupBy == "race" then
+		local race = RaceInfo(group)
+		local index = race and (race.faction == "Horde" and 0 or race.faction == "Alliance" and 1)
+		local color = index and PLAYER_FACTION_COLORS and PLAYER_FACTION_COLORS[index]
+		return color or NEUTRAL_COLOR
+	end
+	return (C_ClassColor and C_ClassColor.GetClassColor(group)) or { r = 1, g = 1, b = 1 }
+end
+
+local function ColoredGroup(groupBy, group, fallback)
+	local color = GroupColor(groupBy, group)
+	return ("|cff%02x%02x%02x%s|r"):format(color.r * 255, color.g * 255, color.b * 255,
+		GroupLabel(groupBy, group, fallback))
+end
+
+-- Groupes (classes ou races) triés du plus joué au moins joué : { group, label, time, chars =
+-- { { key, time } } } (personnages triés de même), total, nombre de personnages au temps connu.
+-- label : nom de race relevé (repli si le jeu ne connaît pas le fichier de race).
+local function PlayedGroups(groupBy, account)
+	local byGroup, total, count = {}, 0, 0
 	for key in pairs(ns.GetKeys()) do
 		local seconds = PlayedSeconds(key)
-		if seconds and seconds > 0 then
-			local classFile = ClassFile(key) or "UNKNOWN"
-			local entry = byClass[classFile]
+		if seconds and seconds > 0 and InAccount(key, account) then
+			local group, label
+			if groupBy == "race" then
+				local identity = Sections(key).I
+				group = identity and (identity.rf or identity.r)
+				label = identity and identity.r
+			else
+				group = ClassFile(key)
+			end
+			group = (group and group ~= "") and group or "UNKNOWN"
+			local entry = byGroup[group]
 			if not entry then
-				entry = { class = classFile, time = 0, chars = {} }
-				byClass[classFile] = entry
+				entry = { group = group, label = label, time = 0, chars = {} }
+				byGroup[group] = entry
 			end
 			entry.time = entry.time + seconds
 			entry.chars[#entry.chars + 1] = { key = key, time = seconds }
@@ -1999,7 +2087,7 @@ local function PlayedByClass()
 		end
 	end
 	local list = {}
-	for _, entry in pairs(byClass) do
+	for _, entry in pairs(byGroup) do
 		table.sort(entry.chars, function(a, b)
 			return a.time > b.time
 		end)
@@ -2011,15 +2099,15 @@ local function PlayedByClass()
 	return list, total, count
 end
 
--- Fiche des personnages d'une classe (relue à chaque rafraîchissement).
-local function OpenClassCard(classFile)
-	local color = ClassColor(classFile)
-	local title = ("|cff%02x%02x%02x%s|r"):format(color.r * 255, color.g * 255, color.b * 255, ClassLabel(classFile))
-	OpenCard(title, function()
+-- Fiche des personnages d'un groupe, pour le regroupement et le compte affichés à l'ouverture
+-- (relue à chaque rafraîchissement).
+local function OpenGroupCard(entry)
+	local groupBy, account, group = PlayedGroupBy(), PlayedAccount(), entry.group
+	OpenCard(ColoredGroup(groupBy, group, entry.label), function()
 		local entries = {}
-		for _, entry in ipairs((PlayedByClass())) do
-			if entry.class == classFile then
-				for _, char in ipairs(entry.chars) do
+		for _, current in ipairs((PlayedGroups(groupBy, account))) do
+			if current.group == group then
+				for _, char in ipairs(current.chars) do
 					local key = char.key
 					entries[#entries + 1] = { text = CharacterName(key), right = FormatDuration(char.time),
 						hint = L["Clic : fiche du personnage"], detail = function()
@@ -2038,22 +2126,52 @@ local function RefreshPlayed()
 	if not playedFrame or not playedFrame:IsShown() then
 		return
 	end
-	local list, total, count = PlayedByClass()
+	local groupBy, account = PlayedGroupBy(), PlayedAccount()
+	local list, total, count = PlayedGroups(groupBy, account)
 	local top = list[1] and list[1].time or 1
 	for _, entry in ipairs(list) do
+		entry.groupBy = groupBy
 		entry.share = total > 0 and entry.time / total or 0
 		entry.bar = entry.time / top
 	end
+	playedFrame.TitleText:SetText(groupBy == "race" and L["Temps de jeu par race"] or L["Temps de jeu par classe"])
 	playedPanel.header:SetText(L["%d personnage(s)"]:format(count))
 	playedPanel.emptyText:SetText(L["Aucun temps de jeu relevé."])
 	playedFrame.totalText:SetText(L["Total : %s"]:format(FormatPlayed(total, true)))
+	if playedFrame.groupDropdown.GenerateMenu then
+		playedFrame.groupDropdown:GenerateMenu() -- texte du choix courant
+	end
+	if playedFrame.accountDropdown and playedFrame.accountDropdown.GenerateMenu then
+		playedFrame.accountDropdown:GenerateMenu()
+	end
 	P.SetListData(playedPanel, list)
+end
+
+-- Libellé + liste déroulante (WowStyle1DropdownTemplate) de la ligne des choix.
+local function CreatePlayedDropdown(f, labelText, width, tooltip, fill)
+	local label = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	label:SetText(labelText)
+	local dropdown = CreateFrame("DropdownButton", nil, f, "WowStyle1DropdownTemplate")
+	dropdown:SetWidth(width)
+	dropdown:SetPoint("LEFT", label, "RIGHT", 6, 0)
+	dropdown:SetupMenu(fill)
+	dropdown:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:AddLine(labelText)
+		GameTooltip:AddLine(tooltip, 1, 1, 1, true)
+		ShowTooltip()
+	end)
+	dropdown:SetScript("OnLeave", GameTooltip_Hide)
+	if P.SkinDropdown then
+		P.SkinDropdown(dropdown)
+	end
+	return label, dropdown
 end
 
 local function BuildPlayed()
 	local settings = PlayedSettings()
 	local f = CreateFrame("Frame", "PolypodeDataPlayedFrame", UIParent, "BackdropTemplate")
-	f:SetSize(math.max(settings.width or 520, PLAYED_MIN_WIDTH), math.max(settings.height or 300, PLAYED_MIN_HEIGHT))
+	f:SetSize(math.max(settings.width or 520, PLAYED_MIN_WIDTH), math.max(settings.height or 320, PLAYED_MIN_HEIGHT))
 	f:SetPoint(settings.point or "CENTER", UIParent, settings.point or "CENTER", settings.x or 0, settings.y or 0)
 	f:SetFrameStrata("DIALOG")
 	f:SetClampedToScreen(true)
@@ -2087,6 +2205,49 @@ local function BuildPlayed()
 	local closeBtn = CreateFrame("Button", nil, f, "UIPanelCloseButton")
 	closeBtn:SetPoint("TOPRIGHT", -8, -8)
 	f.CloseButton = closeBtn
+
+	-- Ligne des choix sous le titre : « Par » (classe / race) à gauche, « Compte » à droite.
+	local groupLabel, groupDropdown = CreatePlayedDropdown(f, L["Par"], 100,
+		L["Temps de jeu additionné par classe ou par race."], function(_, root)
+			for _, choice in ipairs({ { "class", L["Classe"] }, { "race", L["Race"] } }) do
+				root:CreateRadio(choice[2], function()
+					return PlayedGroupBy() == choice[1]
+				end, function()
+					settings.groupBy = choice[1]
+					RefreshPlayed()
+				end)
+			end
+		end)
+	groupLabel:SetPoint("TOPLEFT", 22, -46)
+	f.groupDropdown = groupDropdown
+
+	-- Comptes WoW nommés dans Polypode (Alt + clic dans « Personnages disponibles ») : sans cette
+	-- API (Polypode trop ancien), pas de liste.
+	if P.GetCharacterAccount and P.GetAccountLabels then
+		local accountDropdown
+		local accountLabel
+		accountLabel, accountDropdown = CreatePlayedDropdown(f, L["Compte"], 150,
+			L["Tous les comptes WoW, ou un seul (comptes nommés dans Polypode : Alt + clic sur un personnage dans « Personnages disponibles »)."],
+			function(_, root)
+				local choices = { { nil, L["Tous les comptes"] } }
+				for _, label in ipairs(P.GetAccountLabels()) do
+					choices[#choices + 1] = { label, label }
+				end
+				choices[#choices + 1] = { NO_ACCOUNT, L["Compte non renseigné"] }
+				for _, choice in ipairs(choices) do
+					root:CreateRadio(choice[2], function()
+						return PlayedAccount() == choice[1]
+					end, function()
+						settings.account = choice[1]
+						RefreshPlayed()
+					end)
+				end
+			end)
+		accountDropdown:ClearAllPoints()
+		accountDropdown:SetPoint("TOPRIGHT", -22, -40)
+		accountLabel:SetPoint("RIGHT", accountDropdown, "LEFT", -6, 0)
+		f.accountDropdown = accountDropdown
+	end
 
 	-- Total (doré) en bas à gauche, case « Jours » en bas à droite.
 	f.totalText = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -2131,27 +2292,27 @@ local function BuildPlayed()
 		settings.width, settings.height = f:GetSize()
 	end)
 
-	-- Une ligne par classe : nom (couleur de classe), barre, « part  durée » à droite.
+	-- Une ligne par classe ou race : nom (en couleur), barre, « part  durée » à droite.
 	playedPanel = P.CreatePanel(f, "")
-	playedPanel:SetPoint("TOPLEFT", 12, -36)
+	playedPanel:SetPoint("TOPLEFT", 12, -64)
 	playedPanel:SetPoint("BOTTOMRIGHT", -12, 44)
 	playedPanel:SetBackdropColor(0, 0, 0, 0)
 	playedPanel:SetBackdropBorderColor(0, 0, 0, 0)
 	P.CreateScrollList(playedPanel, function(entry)
-		local color = ClassColor(entry.class)
-		return ("|cff%02x%02x%02x%s|r"):format(color.r * 255, color.g * 255, color.b * 255, ClassLabel(entry.class))
+		return ColoredGroup(entry.groupBy, entry.group, entry.label)
 	end, nil, {
 		inset = 6,
 		rowHeight = P.LIST_ROW_HEIGHT and 22 or nil,
 		onClick = function(entry)
-			OpenClassCard(entry.class)
+			OpenGroupCard(entry)
 		end,
 		tooltip = function(entry)
-			local lines = { ClassLabel(entry.class) }
+			local lines = { GroupLabel(entry.groupBy, entry.group, entry.label) }
 			for _, char in ipairs(entry.chars) do
 				lines[#lines + 1] = { CharacterName(char.key), FormatDuration(char.time) }
 			end
-			lines[#lines + 1] = Gray(L["Clic : fiche des personnages de cette classe"])
+			lines[#lines + 1] = Gray(entry.groupBy == "race" and L["Clic : fiche des personnages de cette race"]
+				or L["Clic : fiche des personnages de cette classe"])
 			return lines
 		end,
 		decorate = function(row, entry)
@@ -2162,7 +2323,7 @@ local function BuildPlayed()
 				row.value:SetJustifyH("RIGHT")
 				row.value:SetWordWrap(false)
 				row.bar = CreateFrame("StatusBar", nil, row)
-				row.bar:SetPoint("LEFT", row, "LEFT", PLAYED_CLASS_WIDTH, 0)
+				row.bar:SetPoint("LEFT", row, "LEFT", PLAYED_LABEL_WIDTH, 0)
 				row.bar:SetPoint("RIGHT", row.value, "LEFT", -6, 0)
 				row.bar:SetHeight(16)
 				row.bar:SetMinMaxValues(0, 1)
@@ -2172,7 +2333,7 @@ local function BuildPlayed()
 				background:SetColorTexture(0, 0, 0, 0.4)
 				row.text:SetPoint("RIGHT", row.bar, "LEFT", -6, 0)
 			end
-			local color = ClassColor(entry.class)
+			local color = GroupColor(entry.groupBy, entry.group)
 			row.bar:SetStatusBarColor(color.r, color.g, color.b)
 			row.bar:SetValue(entry.bar or 0)
 			row.value:SetText(("%.1f%%  %s"):format((entry.share or 0) * 100, FormatPlayed(entry.time)))
@@ -2350,8 +2511,8 @@ local function Build()
 	playedButton:SetScript("OnClick", TogglePlayed)
 	playedButton:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
-		GameTooltip:AddLine(L["Temps de jeu par classe"])
-		GameTooltip:AddLine(L["Clic : temps de jeu de tous les personnages, additionné par classe."], 1, 1, 1, true)
+		GameTooltip:AddLine(L["Temps de jeu"])
+		GameTooltip:AddLine(L["Clic : temps de jeu des personnages, additionné par classe ou par race, pour tous les comptes ou un seul."], 1, 1, 1, true)
 		ShowTooltip()
 	end)
 	playedButton:SetScript("OnLeave", GameTooltip_Hide)

@@ -64,17 +64,20 @@ The warband bank belongs to a **Battle.net account**, the guild bank to a **guil
 character opens it, Polypode Data keeps **only one record** of it (the most recent replaces the
 others, never added up).
 
-### Time played by class
+### Time played by class or by race
 
-Left of the **Find an item** field, a small icon (**pocket watch**) opens the **Time played by
-class** window, inspired by the AccountPlayed addon: the time played of **all known characters**
-(all accounts) added up **by class**, from the most played to the least. Each class has a **bar in
-its color** (length relative to the most played), its **share of the total** and its duration; the
+Left of the **Find an item** field, a small icon (**pocket watch**) opens the **time played**
+window, inspired by the AccountPlayed addon: the time played of the known characters added up **by
+class** or **by race** (**By** list), from the most played to the least. The **Account** list keeps
+all WoW accounts or only one: the accounts are those named in Polypode (Alt + click a character in
+"Available characters"), plus "Account not set" for the other characters. Each line has a **bar**
+(length relative to the most played) in the class color, or the faction color for a race (gold for
+a race of both factions: pandaren, dracthyr...), its **share of the total** and its duration; the
 **total** is at the bottom. The **Days** box shows durations in days (in years and days for a total
-of a year or more), unchecked in hours. On **hover** over a class: its characters and their time
+of a year or more), unchecked in hours. On **hover** over a line: its characters and their time
 played; **click**: a sheet of these characters (click one of them: their sheet). The window moves
-(drag), resizes (bottom-right corner) and closes with Escape; its size, position and box are kept.
-Only characters whose time played was recorded (at login) count.
+(drag), resizes (bottom-right corner) and closes with Escape; its size, position, box and both
+choices are kept. Only characters whose time played was recorded (at login) count.
 
 ### Finding a recipe
 
