@@ -30,7 +30,7 @@ Nécessite **Polypode 0.51.1** ou plus récent.
 ## Utilisation
 
 Le bouton **Data** (barre de titre de la fenêtre Polypode) ou `/poly data` ouvre une fenêtre
-redimensionnable (poignée du coin bas-droit ; Échap ferme) :
+redimensionnable (poignée du coin bas-droit ; **double-clic** sur sa barre de titre : retour à la taille par défaut ; Échap ferme) :
 
 - l'en-tête de la liste donne le **nombre de personnages** et l'**or total** ;
 - un **tableau sans trait** (colonnes alignées, en-têtes expliqués au survol) liste tous les
@@ -84,7 +84,7 @@ dracthyr...), sa **part du total** et sa durée ; le **total** est en bas. La ca
 les durées en jours (en années et jours pour le total à partir d'un an), décochée en heures. Au
 **survol** d'une ligne : ses personnages et leur temps de jeu ; **clic** : une fiche de ces
 personnages (clic sur l'un d'eux : sa fiche). La fenêtre se déplace (glisser), se redimensionne
-(coin bas-droit) et se ferme par Échap ; sa taille, sa position, la case et les deux choix sont
+(coin bas-droit ; double-clic sur le titre : taille par défaut) et se ferme par Échap ; sa taille, sa position, la case et les deux choix sont
 gardés. Seuls les personnages dont le temps de jeu a été relevé (à la connexion) comptent.
 
 ### Rechercher une recette
@@ -226,6 +226,7 @@ other language).*
 
 ## Version
 
+`2.7.0` : double-clic sur la barre de titre (fenêtre Data, fenêtre du temps de jeu) : retour à la taille par défaut (Polypode 2.12).
 `2.6.1` : temps de jeu par race : une seule ligne par race (les personnages relevés avant la 2.4.0, connus par le seul nom traduit de leur race, parfois au féminin, sont rattachés à leur race).
 `2.6.0` : temps de jeu **par race** (liste « Par ») et **filtre par compte WoW** (liste « Compte »).
 `2.5.0` : fenêtre **Temps de jeu par classe** (icône à gauche de la recherche d'objet), comme l'addon AccountPlayed.

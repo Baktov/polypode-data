@@ -28,7 +28,7 @@ Requires **Polypode 0.51.1** or later.
 ## Usage
 
 The **Data** button (title bar of the Polypode window) or `/poly data` opens a resizable window
-(bottom-right corner grip; Escape closes it):
+(bottom-right corner grip; **double-click** its title bar: back to the default size; Escape closes it):
 
 - the list header gives the **number of characters** and the **total gold**;
 - a **borderless table** (aligned columns, headers explained on hover) lists every known
@@ -76,7 +76,7 @@ a race of both factions: pandaren, dracthyr...), its **share of the total** and 
 **total** is at the bottom. The **Days** box shows durations in days (in years and days for a total
 of a year or more), unchecked in hours. On **hover** over a line: its characters and their time
 played; **click**: a sheet of these characters (click one of them: their sheet). The window moves
-(drag), resizes (bottom-right corner) and closes with Escape; its size, position, box and both
+(drag), resizes (bottom-right corner; double-click the title: default size) and closes with Escape; its size, position, box and both
 choices are kept. Only characters whose time played was recorded (at login) count.
 
 ### Finding a recipe

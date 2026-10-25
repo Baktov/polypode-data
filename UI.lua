@@ -1950,6 +1950,7 @@ end
 -- PolypodeDataDB.played.
 local PLAYED_ICON = "Interface\\Icons\\INV_Misc_PocketWatch_01"
 local PLAYED_MIN_WIDTH, PLAYED_MIN_HEIGHT = 420, 220
+local PLAYED_DEFAULT_WIDTH, PLAYED_DEFAULT_HEIGHT = 520, 320
 local PLAYED_LABEL_WIDTH = 140 -- nom de classe ou de race (« Chevalier de la mort »...)
 local PLAYED_VALUE_WIDTH = 100 -- « 99.9%  999 j »
 local NO_ACCOUNT = "~none" -- choix « Compte non renseigné » (comme les groupes de Polypode)
@@ -2219,7 +2220,8 @@ end
 local function BuildPlayed()
 	local settings = PlayedSettings()
 	local f = CreateFrame("Frame", "PolypodeDataPlayedFrame", UIParent, "BackdropTemplate")
-	f:SetSize(math.max(settings.width or 520, PLAYED_MIN_WIDTH), math.max(settings.height or 320, PLAYED_MIN_HEIGHT))
+	f:SetSize(math.max(settings.width or PLAYED_DEFAULT_WIDTH, PLAYED_MIN_WIDTH),
+		math.max(settings.height or PLAYED_DEFAULT_HEIGHT, PLAYED_MIN_HEIGHT))
 	f:SetPoint(settings.point or "CENTER", UIParent, settings.point or "CENTER", settings.x or 0, settings.y or 0)
 	f:SetFrameStrata("DIALOG")
 	f:SetClampedToScreen(true)
@@ -2339,6 +2341,13 @@ local function BuildPlayed()
 		f:StopMovingOrSizing()
 		settings.width, settings.height = f:GetSize()
 	end)
+	-- Double-clic sur la barre de titre : taille par défaut (Polypode 2.12).
+	if P.EnableTitleDoubleClick then
+		P.EnableTitleDoubleClick(f, function()
+			settings.width, settings.height = PLAYED_DEFAULT_WIDTH, PLAYED_DEFAULT_HEIGHT
+			f:SetSize(PLAYED_DEFAULT_WIDTH, PLAYED_DEFAULT_HEIGHT)
+		end)
+	end
 
 	-- Une ligne par classe ou race : nom (en couleur), barre, « part  durée » à droite.
 	playedPanel = P.CreatePanel(f, "")
@@ -2627,6 +2636,14 @@ local function Build()
 		current.width, current.height = frame:GetSize()
 	end)
 	frame.resizeGrip = grip
+	-- Double-clic sur la barre de titre : taille par défaut (Polypode 2.12).
+	if P.EnableTitleDoubleClick then
+		P.EnableTitleDoubleClick(frame, function()
+			local current = WindowSettings()
+			current.width, current.height = DEFAULT_WIDTH, DEFAULT_HEIGHT
+			frame:SetSize(DEFAULT_WIDTH, DEFAULT_HEIGHT)
+		end)
+	end
 	-- Colonnes recalées à 40 % de la largeur pendant le redimensionnement (regroupé).
 	local relayoutPending
 	frame:HookScript("OnSizeChanged", function()
