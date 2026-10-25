@@ -226,6 +226,7 @@ other language).*
 
 ## Version
 
+`2.6.1` : temps de jeu par race : une seule ligne par race (les personnages relevés avant la 2.4.0, connus par le seul nom traduit de leur race, parfois au féminin, sont rattachés à leur race).
 `2.6.0` : temps de jeu **par race** (liste « Par ») et **filtre par compte WoW** (liste « Compte »).
 `2.5.0` : fenêtre **Temps de jeu par classe** (icône à gauche de la recherche d'objet), comme l'addon AccountPlayed.
 `2.4.0` : fichier de race enregistré (indépendant de la langue et du genre), pour la Matrice de Polypode Suivi.

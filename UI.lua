@@ -2033,6 +2033,43 @@ local function RaceInfo(raceFile)
 	return races[raceFile]
 end
 
+-- Formes féminines des races (client français) : les noms du jeu (C_CreatureInfo.GetRaceInfo) sont
+-- au masculin (même table que la Matrice de Polypode Suivi).
+local FEMININE_RACES = {
+	["Humaine"] = "Human", ["Kultirassienne"] = "KulTiran", ["Naine"] = "Dwarf",
+	["Naine sombrefer"] = "DarkIronDwarf", ["Pandarène"] = "Pandaren", ["Orque"] = "Orc",
+	["Orque mag'har"] = "MagharOrc", ["Morte-vivante"] = "Scourge", ["Mort-vivante"] = "Scourge",
+	["Taurène"] = "Tauren", ["Taurène de Haut-Roc"] = "HighmountainTauren", ["Trollesse"] = "Troll",
+	["Trollesse zandalari"] = "ZandalariTroll", ["Gobeline"] = "Goblin", ["Vulpérine"] = "Vulpera",
+}
+
+-- Nom de race comparable : sans accents, majuscules, espaces, tirets ni apostrophes.
+local function RaceKey(name)
+	return (Normalize(tostring(name):gsub("’", "'")):gsub("[%s%-']", ""))
+end
+
+-- Fichier de race d'une identité : rf (relevé depuis la 2.4.0), sinon d'après le nom traduit r
+-- (relevés plus anciens) : noms du jeu, formes féminines, et correspondances r → rf apprises des
+-- autres personnages (identities = sections I de tous les personnages).
+local function RaceFilesByName(identities)
+	local byName = {}
+	RaceInfo("") -- table du jeu chargée
+	for file, race in pairs(races) do
+		if race.name then
+			byName[RaceKey(race.name)] = file
+		end
+	end
+	for name, file in pairs(FEMININE_RACES) do
+		byName[RaceKey(name)] = file
+	end
+	for _, identity in ipairs(identities) do
+		if identity.r and identity.rf and identity.rf ~= "" then
+			byName[RaceKey(identity.r)] = identity.rf
+		end
+	end
+	return byName
+end
+
 local function GroupLabel(groupBy, group, fallback)
 	if group == "UNKNOWN" then
 		return L["Inconnue"]
@@ -2064,13 +2101,24 @@ end
 -- label : nom de race relevé (repli si le jeu ne connaît pas le fichier de race).
 local function PlayedGroups(groupBy, account)
 	local byGroup, total, count = {}, 0, 0
+	local raceFiles
+	if groupBy == "race" then
+		local identities = {}
+		for key in pairs(ns.GetKeys()) do
+			identities[#identities + 1] = Sections(key).I or {}
+		end
+		raceFiles = RaceFilesByName(identities)
+	end
 	for key in pairs(ns.GetKeys()) do
 		local seconds = PlayedSeconds(key)
 		if seconds and seconds > 0 and InAccount(key, account) then
 			local group, label
 			if groupBy == "race" then
 				local identity = Sections(key).I
-				group = identity and (identity.rf or identity.r)
+				group = identity and identity.rf
+				if (not group or group == "") and identity and identity.r then
+					group = raceFiles[RaceKey(identity.r)] or identity.r
+				end
 				label = identity and identity.r
 			else
 				group = ClassFile(key)
