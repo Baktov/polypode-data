@@ -64,6 +64,18 @@ The warband bank belongs to a **Battle.net account**, the guild bank to a **guil
 character opens it, Polypode Data keeps **only one record** of it (the most recent replaces the
 others, never added up).
 
+### Time played by class
+
+Left of the **Find an item** field, a small icon (**pocket watch**) opens the **Time played by
+class** window, inspired by the AccountPlayed addon: the time played of **all known characters**
+(all accounts) added up **by class**, from the most played to the least. Each class has a **bar in
+its color** (length relative to the most played), its **share of the total** and its duration; the
+**total** is at the bottom. The **Days** box shows durations in days (in years and days for a total
+of a year or more), unchecked in hours. On **hover** over a class: its characters and their time
+played; **click**: a sheet of these characters (click one of them: their sheet). The window moves
+(drag), resizes (bottom-right corner) and closes with Escape; its size, position and box are kept.
+Only characters whose time played was recorded (at login) count.
+
 ### Finding a recipe
 
 Right of the **Find an item** field (both right of the title), a second field **Find a recipe**:

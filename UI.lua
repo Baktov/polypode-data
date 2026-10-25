@@ -24,7 +24,7 @@ end
 -- Colonnes ancrées au bord droit, à la largeur de leur plus long contenu (mesurée à chaque
 -- rafraîchissement) ; le nom prend la place restante (comme la fenêtre de Polypode Suivi).
 
-local MIN_WIDTH, MIN_HEIGHT = 700, 220 -- largeur : boutons, titre et deux champs de recherche
+local MIN_WIDTH, MIN_HEIGHT = 730, 220 -- largeur : boutons, titre, icône du temps de jeu et deux champs de recherche
 local SEARCH_WIDTH = 105 -- chaque champ de recherche (objets, recettes), côte à côte
 local DEFAULT_WIDTH, DEFAULT_HEIGHT = 820, 360
 local COLUMN_GAP = 14
@@ -1940,6 +1940,257 @@ local function OpenDataOptions()
 	end
 end
 
+-- TEMPS DE JEU PAR CLASSE (icône à gauche de la recherche d'objet ; même présentation que
+-- l'addon AccountPlayed) : temps de jeu de tous les personnages connus (PlayedSeconds), additionné
+-- par classe, une barre à la couleur de la classe (longueur relative à la première), part du total
+-- et durée ; total en bas, case « Jours » (jours, sinon heures). Survol d'une classe = ses
+-- personnages, clic = fiche épinglée de ces personnages (clic sur l'un = sa fiche). Taille,
+-- position et case dans PolypodeDataDB.played.
+local PLAYED_ICON = "Interface\\Icons\\INV_Misc_PocketWatch_01"
+local PLAYED_MIN_WIDTH, PLAYED_MIN_HEIGHT = 420, 200
+local PLAYED_CLASS_WIDTH = 140 -- nom de classe (« Chevalier de la mort »...)
+local PLAYED_VALUE_WIDTH = 100 -- « 99.9%  999 j »
+local playedFrame, playedPanel
+
+local function PlayedSettings()
+	PolypodeDataDB = PolypodeDataDB or {}
+	PolypodeDataDB.played = PolypodeDataDB.played or {}
+	return PolypodeDataDB.played
+end
+
+-- « 12 j » (case « Jours », « 5 h » sous un jour) ou « 290 h » ; total : « 1 a 20 j » à partir d'un an.
+local function FormatPlayed(seconds, total)
+	local hours = math.floor((tonumber(seconds) or 0) / 3600)
+	if PlayedSettings().hours or hours < 24 then
+		return L["%d h"]:format(hours)
+	end
+	local days = math.floor(hours / 24)
+	if total and days >= 365 then
+		return L["%d a %d j"]:format(math.floor(days / 365), days % 365)
+	end
+	return L["%d j"]:format(days)
+end
+
+local function ClassLabel(classFile)
+	return (LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[classFile]) or L["Inconnue"]
+end
+
+local function ClassColor(classFile)
+	local color = C_ClassColor and C_ClassColor.GetClassColor(classFile)
+	return color or { r = 1, g = 1, b = 1 }
+end
+
+-- Classes triées du plus joué au moins joué : { class, time, chars = { { key, time } } } (personnages
+-- triés de même), total, nombre de personnages au temps connu.
+local function PlayedByClass()
+	local byClass, total, count = {}, 0, 0
+	for key in pairs(ns.GetKeys()) do
+		local seconds = PlayedSeconds(key)
+		if seconds and seconds > 0 then
+			local classFile = ClassFile(key) or "UNKNOWN"
+			local entry = byClass[classFile]
+			if not entry then
+				entry = { class = classFile, time = 0, chars = {} }
+				byClass[classFile] = entry
+			end
+			entry.time = entry.time + seconds
+			entry.chars[#entry.chars + 1] = { key = key, time = seconds }
+			total, count = total + seconds, count + 1
+		end
+	end
+	local list = {}
+	for _, entry in pairs(byClass) do
+		table.sort(entry.chars, function(a, b)
+			return a.time > b.time
+		end)
+		list[#list + 1] = entry
+	end
+	table.sort(list, function(a, b)
+		return a.time > b.time
+	end)
+	return list, total, count
+end
+
+-- Fiche des personnages d'une classe (relue à chaque rafraîchissement).
+local function OpenClassCard(classFile)
+	local color = ClassColor(classFile)
+	local title = ("|cff%02x%02x%02x%s|r"):format(color.r * 255, color.g * 255, color.b * 255, ClassLabel(classFile))
+	OpenCard(title, function()
+		local entries = {}
+		for _, entry in ipairs((PlayedByClass())) do
+			if entry.class == classFile then
+				for _, char in ipairs(entry.chars) do
+					local key = char.key
+					entries[#entries + 1] = { text = CharacterName(key), right = FormatDuration(char.time),
+						hint = L["Clic : fiche du personnage"], detail = function()
+							OpenCard(CharacterName(key), function()
+								return CharacterEntries(key, true)
+							end, nil, nil, key)
+						end }
+				end
+			end
+		end
+		return entries
+	end, L["Aucun temps de jeu relevé."])
+end
+
+local function RefreshPlayed()
+	if not playedFrame or not playedFrame:IsShown() then
+		return
+	end
+	local list, total, count = PlayedByClass()
+	local top = list[1] and list[1].time or 1
+	for _, entry in ipairs(list) do
+		entry.share = total > 0 and entry.time / total or 0
+		entry.bar = entry.time / top
+	end
+	playedPanel.header:SetText(L["%d personnage(s)"]:format(count))
+	playedPanel.emptyText:SetText(L["Aucun temps de jeu relevé."])
+	playedFrame.totalText:SetText(L["Total : %s"]:format(FormatPlayed(total, true)))
+	P.SetListData(playedPanel, list)
+end
+
+local function BuildPlayed()
+	local settings = PlayedSettings()
+	local f = CreateFrame("Frame", "PolypodeDataPlayedFrame", UIParent, "BackdropTemplate")
+	f:SetSize(math.max(settings.width or 520, PLAYED_MIN_WIDTH), math.max(settings.height or 300, PLAYED_MIN_HEIGHT))
+	f:SetPoint(settings.point or "CENTER", UIParent, settings.point or "CENTER", settings.x or 0, settings.y or 0)
+	f:SetFrameStrata("DIALOG")
+	f:SetClampedToScreen(true)
+	f:SetMovable(true)
+	f:SetResizable(true)
+	f:SetResizeBounds(PLAYED_MIN_WIDTH, PLAYED_MIN_HEIGHT)
+	f:EnableMouse(true)
+	f:RegisterForDrag("LeftButton")
+	f:SetScript("OnDragStart", f.StartMoving)
+	f:SetScript("OnDragStop", function(self)
+		self:StopMovingOrSizing()
+		local point, _, _, x, y = self:GetPoint()
+		settings.point, settings.x, settings.y = point, x, y
+	end)
+	-- Cadre de boîte de dialogue sur fond sombre transparent, comme AccountPlayed.
+	f:SetBackdrop({
+		bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+		edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+		tile = true, tileSize = 32, edgeSize = 32,
+		insets = { left = 11, right = 12, top = 12, bottom = 11 },
+	})
+	f:SetBackdropColor(0, 0, 0, 0.5)
+	f:Hide()
+	tinsert(UISpecialFrames, "PolypodeDataPlayedFrame") -- Échap ferme la fenêtre
+
+	local title = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
+	title:SetPoint("TOP", 0, -14)
+	title:SetText(L["Temps de jeu par classe"])
+	f.TitleText = title
+
+	local closeBtn = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+	closeBtn:SetPoint("TOPRIGHT", -8, -8)
+	f.CloseButton = closeBtn
+
+	-- Total (doré) en bas à gauche, case « Jours » en bas à droite.
+	f.totalText = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+	f.totalText:SetPoint("BOTTOMLEFT", 18, 18)
+
+	local daysCheck = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
+	daysCheck:SetSize(24, 24)
+	daysCheck:SetPoint("BOTTOMRIGHT", -28, 14)
+	daysCheck:SetChecked(not settings.hours)
+	local daysLabel = daysCheck:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	daysLabel:SetPoint("RIGHT", daysCheck, "LEFT", -2, 0)
+	daysLabel:SetText(L["Jours"])
+	daysCheck:SetScript("OnClick", function(self)
+		settings.hours = not self:GetChecked()
+		RefreshPlayed()
+		RefreshCards()
+	end)
+	daysCheck:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_TOP")
+		GameTooltip:AddLine(L["Format du temps"])
+		GameTooltip:AddLine(L["Cochée : jours (années pour le total) ; décochée : heures."], 1, 1, 1, true)
+		ShowTooltip()
+	end)
+	daysCheck:SetScript("OnLeave", GameTooltip_Hide)
+	if P.SkinCheckBox then
+		P.SkinCheckBox(daysCheck)
+	end
+
+	-- Poignée de redimensionnement (coin bas-droit).
+	local grip = CreateFrame("Button", nil, f)
+	grip:SetSize(16, 16)
+	grip:SetPoint("BOTTOMRIGHT", -6, 6)
+	grip:SetFrameLevel(f:GetFrameLevel() + 10)
+	grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+	grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+	grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+	grip:SetScript("OnMouseDown", function()
+		f:StartSizing("BOTTOMRIGHT")
+	end)
+	grip:SetScript("OnMouseUp", function()
+		f:StopMovingOrSizing()
+		settings.width, settings.height = f:GetSize()
+	end)
+
+	-- Une ligne par classe : nom (couleur de classe), barre, « part  durée » à droite.
+	playedPanel = P.CreatePanel(f, "")
+	playedPanel:SetPoint("TOPLEFT", 12, -36)
+	playedPanel:SetPoint("BOTTOMRIGHT", -12, 44)
+	playedPanel:SetBackdropColor(0, 0, 0, 0)
+	playedPanel:SetBackdropBorderColor(0, 0, 0, 0)
+	P.CreateScrollList(playedPanel, function(entry)
+		local color = ClassColor(entry.class)
+		return ("|cff%02x%02x%02x%s|r"):format(color.r * 255, color.g * 255, color.b * 255, ClassLabel(entry.class))
+	end, nil, {
+		inset = 6,
+		rowHeight = P.LIST_ROW_HEIGHT and 22 or nil,
+		onClick = function(entry)
+			OpenClassCard(entry.class)
+		end,
+		tooltip = function(entry)
+			local lines = { ClassLabel(entry.class) }
+			for _, char in ipairs(entry.chars) do
+				lines[#lines + 1] = { CharacterName(char.key), FormatDuration(char.time) }
+			end
+			lines[#lines + 1] = Gray(L["Clic : fiche des personnages de cette classe"])
+			return lines
+		end,
+		decorate = function(row, entry)
+			if not row.bar then
+				row.value = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+				row.value:SetPoint("RIGHT", -4, 0)
+				row.value:SetWidth(PLAYED_VALUE_WIDTH)
+				row.value:SetJustifyH("RIGHT")
+				row.value:SetWordWrap(false)
+				row.bar = CreateFrame("StatusBar", nil, row)
+				row.bar:SetPoint("LEFT", row, "LEFT", PLAYED_CLASS_WIDTH, 0)
+				row.bar:SetPoint("RIGHT", row.value, "LEFT", -6, 0)
+				row.bar:SetHeight(16)
+				row.bar:SetMinMaxValues(0, 1)
+				row.bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+				local background = row.bar:CreateTexture(nil, "BACKGROUND")
+				background:SetAllPoints()
+				background:SetColorTexture(0, 0, 0, 0.4)
+				row.text:SetPoint("RIGHT", row.bar, "LEFT", -6, 0)
+			end
+			local color = ClassColor(entry.class)
+			row.bar:SetStatusBarColor(color.r, color.g, color.b)
+			row.bar:SetValue(entry.bar or 0)
+			row.value:SetText(("%.1f%%  %s"):format((entry.share or 0) * 100, FormatPlayed(entry.time)))
+		end,
+	})
+	f:SetScript("OnShow", RefreshPlayed)
+	playedFrame = f
+	P.ui.dataPlayedFrame = f
+	P.SkinFrame(f)
+end
+
+local function TogglePlayed()
+	if not playedFrame then
+		BuildPlayed()
+	end
+	playedFrame:SetShown(not playedFrame:IsShown())
+end
+
 local function Build()
 	local settings = WindowSettings()
 	frame = CreateFrame("Frame", "PolypodeDataFrame", UIParent, "BackdropTemplate")
@@ -2080,7 +2331,32 @@ local function Build()
 	searchBox = CreateFrame("EditBox", nil, frame, "SearchBoxTemplate")
 	searchBox:SetSize(SEARCH_WIDTH, 20)
 	searchBox:SetPoint("RIGHT", recipeBox, "LEFT", -10, 0)
-	title:SetPoint("RIGHT", searchBox, "LEFT", -12, 0)
+
+	-- Temps de jeu par classe : petite icône à gauche de la recherche d'objet.
+	local playedButton = CreateFrame("Button", nil, frame)
+	playedButton:SetSize(CONTAINER_ICON_SIZE, CONTAINER_ICON_SIZE)
+	playedButton:SetPoint("RIGHT", searchBox, "LEFT", -10, 0)
+	local playedIcon = playedButton:CreateTexture(nil, "ARTWORK")
+	playedIcon:SetAllPoints()
+	playedIcon:SetTexture(PLAYED_ICON)
+	playedIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	playedButton:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+	playedButton:SetScript("OnMouseDown", function()
+		playedIcon:SetPoint("TOPLEFT", 1, -1)
+	end)
+	playedButton:SetScript("OnMouseUp", function()
+		playedIcon:SetAllPoints()
+	end)
+	playedButton:SetScript("OnClick", TogglePlayed)
+	playedButton:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+		GameTooltip:AddLine(L["Temps de jeu par classe"])
+		GameTooltip:AddLine(L["Clic : temps de jeu de tous les personnages, additionné par classe."], 1, 1, 1, true)
+		ShowTooltip()
+	end)
+	playedButton:SetScript("OnLeave", GameTooltip_Hide)
+	P.ui.dataPlayedButton = playedButton
+	title:SetPoint("RIGHT", playedButton, "LEFT", -12, 0)
 	searchBox:SetAutoFocus(false)
 	if searchBox.Instructions then
 		searchBox.Instructions:SetText(L["Rech. objet"])
@@ -2239,6 +2515,7 @@ end
 function ns.Refresh()
 	namesPending = false -- remis à vrai par ItemName si un nom manque encore
 	RefreshCards()
+	RefreshPlayed()
 	if not frame or not frame:IsShown() then
 		return
 	end

@@ -71,6 +71,19 @@ La banque de bataillon appartient à un **compte Battle.net**, la banque de guil
 quel que soit le personnage qui l'ouvre, Polypode Data n'en garde **qu'un relevé** (le plus récent
 remplace les autres, jamais cumulés).
 
+### Temps de jeu par classe
+
+À gauche du champ **Rechercher un objet**, une petite icône (**montre de gousset**) ouvre la fenêtre
+**Temps de jeu par classe**, inspirée de l'addon AccountPlayed : le temps de jeu de **tous les
+personnages connus** (tous comptes confondus) additionné **par classe**, de la plus jouée à la moins
+jouée. Chaque classe a une **barre à sa couleur** (longueur relative à la plus jouée), sa **part du
+total** et sa durée ; le **total** est en bas. La case **Jours** affiche les durées en jours (en
+années et jours pour le total à partir d'un an), décochée en heures. Au **survol** d'une classe :
+ses personnages et leur temps de jeu ; **clic** : une fiche de ces personnages (clic sur l'un
+d'eux : sa fiche). La fenêtre se déplace (glisser), se redimensionne (coin bas-droit) et se ferme
+par Échap ; sa taille, sa position et la case sont gardées. Seuls les personnages dont le temps de
+jeu a été relevé (à la connexion) comptent.
+
 ### Rechercher une recette
 
 À droite du champ **Rechercher un objet** (tous deux à droite du titre), un second champ **Rechercher une recette** : dès 2 lettres,
@@ -210,6 +223,7 @@ other language).*
 
 ## Version
 
+`2.5.0` : fenêtre **Temps de jeu par classe** (icône à gauche de la recherche d'objet), comme l'addon AccountPlayed.
 `2.4.0` : fichier de race enregistré (indépendant de la langue et du genre), pour la Matrice de Polypode Suivi.
 `2.3.0` : option « Contenu des sacs et banques » : choix **Baganator** (si installé), qui ouvre les sacs et banques dans la fenêtre de Baganator pour les personnages qu'il connaît, en icônes sinon.
 `2.2.0` : Polypode Data en anglais, allemand, espagnol, italien et portugais du Brésil, selon la langue choisie dans Polypode ; termes du jeu de chaque langue (bataillon, banque de guilde...). *Translated into English, German, Spanish, Italian and Brazilian Portuguese.*
