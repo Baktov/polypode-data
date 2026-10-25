@@ -226,6 +226,7 @@ other language).*
 
 ## Version
 
+`2.7.1` : fenêtre du temps de jeu : redimensionnement par la poignée du coin corrigé (plus d'agrandissement d'un coup hors de l'écran ; coin haut-gauche fixe, taille bornée à l'écran).
 `2.7.0` : double-clic sur la barre de titre (fenêtre Data, fenêtre du temps de jeu) : retour à la taille par défaut (Polypode 2.12).
 `2.6.1` : temps de jeu par race : une seule ligne par race (les personnages relevés avant la 2.4.0, connus par le seul nom traduit de leur race, parfois au féminin, sont rattachés à leur race).
 `2.6.0` : temps de jeu **par race** (liste « Par ») et **filtre par compte WoW** (liste « Compte »).

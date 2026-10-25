@@ -26,7 +26,8 @@ donnée que si elle sert à gérer ses personnages.
 
 ## Dépendances vers Polypode (API publique utilisée)
 
-`P.EnableTitleDoubleClick(fenêtre, remise, hauteur)` (si présente, Polypode 2.12 : double-clic sur la barre de titre, taille par défaut).
+`P.EnableTitleDoubleClick(fenêtre, remise, hauteur)` (si présente, Polypode 2.12 : double-clic sur la barre de titre, taille par défaut). Poignée de redimensionnement de la fenêtre du temps de jeu (`BuildPlayed`) : au `OnMouseDown`, ancre `TOPLEFT` (coin haut-gauche fixe, gardée comme position `played.point` / `x` / `y`) et `SetResizeBounds` maximum = place jusqu'aux bords droit et bas de l'écran, puis `StartSizing("BOTTOMRIGHT", true)` (fenêtre retenue dans l'écran : sans cela, elle s'agrandissait d'un coup hors de l'écran, comme Histoire 1.14.1).
+Taille enregistrée ramenée à celle de l'écran à la construction.
 
 Langues (si présentes) : `P.NewLocale`, `P.AddTranslations` (Polypode 2.8), `P.OnLanguageApplied` (2.9).
 

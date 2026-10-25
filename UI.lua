@@ -2220,8 +2220,9 @@ end
 local function BuildPlayed()
 	local settings = PlayedSettings()
 	local f = CreateFrame("Frame", "PolypodeDataPlayedFrame", UIParent, "BackdropTemplate")
-	f:SetSize(math.max(settings.width or PLAYED_DEFAULT_WIDTH, PLAYED_MIN_WIDTH),
-		math.max(settings.height or PLAYED_DEFAULT_HEIGHT, PLAYED_MIN_HEIGHT))
+	-- Taille gardée, ramenée à celle de l'écran (une taille enregistrée trop grande la dépasserait).
+	f:SetSize(math.min(math.max(settings.width or PLAYED_DEFAULT_WIDTH, PLAYED_MIN_WIDTH), math.max(UIParent:GetWidth(), PLAYED_MIN_WIDTH)),
+		math.min(math.max(settings.height or PLAYED_DEFAULT_HEIGHT, PLAYED_MIN_HEIGHT), math.max(UIParent:GetHeight(), PLAYED_MIN_HEIGHT)))
 	f:SetPoint(settings.point or "CENTER", UIParent, settings.point or "CENTER", settings.x or 0, settings.y or 0)
 	f:SetFrameStrata("DIALOG")
 	f:SetClampedToScreen(true)
@@ -2334,12 +2335,25 @@ local function BuildPlayed()
 	grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
 	grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
 	grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+	-- Pendant le redimensionnement, le coin haut-gauche reste fixe (ancre TOPLEFT, gardée comme
+	-- position) et la taille ne dépasse pas la place jusqu'aux bords de l'écran : la fenêtre étant
+	-- retenue dans l'écran, le jeu la repousserait et elle s'agrandirait d'un coup hors de l'écran
+	-- (comme Polypode Histoire 1.14.1). Départ depuis la souris, comme les poignées de Blizzard.
 	grip:SetScript("OnMouseDown", function()
-		f:StartSizing("BOTTOMRIGHT")
+		local left, top = f:GetLeft(), f:GetTop()
+		if left and top then
+			f:ClearAllPoints()
+			f:SetPoint("TOPLEFT", UIParent, "TOPLEFT", left, top - UIParent:GetHeight())
+			f:SetResizeBounds(PLAYED_MIN_WIDTH, PLAYED_MIN_HEIGHT, math.max(UIParent:GetWidth() - left, PLAYED_MIN_WIDTH),
+				math.max(top, PLAYED_MIN_HEIGHT))
+		end
+		f:StartSizing("BOTTOMRIGHT", true)
 	end)
 	grip:SetScript("OnMouseUp", function()
 		f:StopMovingOrSizing()
 		settings.width, settings.height = f:GetSize()
+		local point, _, _, x, y = f:GetPoint()
+		settings.point, settings.x, settings.y = point, x, y
 	end)
 	-- Double-clic sur la barre de titre : taille par défaut (Polypode 2.12).
 	if P.EnableTitleDoubleClick then
