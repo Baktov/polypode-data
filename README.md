@@ -35,7 +35,10 @@ redimensionnable (poignée du coin bas-droit ; **double-clic** sur sa barre de t
 - l'en-tête de la liste donne le **nombre de personnages** et l'**or total** ;
 - un **tableau sans trait** (colonnes alignées, en-têtes expliqués au survol) liste tous les
   personnages connus, le personnage joué en tête : **Niveau**, **iLvl** (niveau d'objet équipé),
-  **Métiers** (icône et niveau des deux métiers principaux), **Or**, **Temps de jeu**, **Vu**
+  **Métiers** (icône et niveau des deux métiers principaux), **Sacs et banques** (de 0 à 4
+  icônes : sacs, banque, banque de bataillon, banque de guilde, quand elles sont relevées et non
+  vides ; au survol, nombre d'objets et date du relevé ; **clic** sur une icône : son contenu, comme
+  depuis la fiche du personnage), **Or**, **Temps de jeu**, **Vu**
   (« en ligne » en vert, ou quand le personnage a été vu connecté) ;
 - **au survol d'un personnage**, le détail : race, classe, spécialisation, faction, zone, niveau
   d'objet, or, temps de jeu, **tous les métiers** (niveau / maximum), **l'équipement** emplacement
@@ -62,7 +65,8 @@ personnage), **emblème du bataillon** (banque de bataillon du compte) et **coff
 d'objets, le nombre d'objets différents (et l'or de la banque de guilde) et la date du relevé ;
 au clic : la fiche du contenu, la même que depuis le détail du personnage. Une banque jamais
 ouverte avec ce personnage (ou un personnage de la guilde) n'est pas encore relevée : l'infobulle
-l'indique.
+l'indique (pour la banque du personnage : « Banque vide ou banque pas encore relevée », une banque
+vide n'étant pas gardée).
 
 **Clic droit** sur une icône : **Remettre à zéro** efface ce relevé (sur ce client). Les sacs sont
 relus aussitôt ; une banque doit être **rouverte** pour être relevée de nouveau (le message le rappelle).
@@ -226,6 +230,7 @@ other language).*
 
 ## Version
 
+`2.8.0` : colonne **Sacs et banques** du tableau : de 0 à 4 icônes (sacs, banque, banque de bataillon, banque de guilde) relevées et non vides, clic = contenu ; banque du personnage sans relevé : « Banque vide ou banque pas encore relevée ».
 `2.7.1` : fenêtre du temps de jeu : redimensionnement par la poignée du coin corrigé (plus d'agrandissement d'un coup hors de l'écran ; coin haut-gauche fixe, taille bornée à l'écran).
 `2.7.0` : double-clic sur la barre de titre (fenêtre Data, fenêtre du temps de jeu) : retour à la taille par défaut (Polypode 2.12).
 `2.6.1` : temps de jeu par race : une seule ligne par race (les personnages relevés avant la 2.4.0, connus par le seul nom traduit de leur race, parfois au féminin, sont rattachés à leur race).

@@ -33,7 +33,10 @@ The **Data** button (title bar of the Polypode window) or `/poly data` opens a r
 - the list header gives the **number of characters** and the **total gold**;
 - a **borderless table** (aligned columns, headers explained on hover) lists every known
   character, the current character first: **Level**, **iLvl** (equipped item level),
-  **Professions** (icon and level of the two main professions), **Gold**, **Time played**,
+  **Professions** (icon and level of the two main professions), **Bags and banks** (0 to 4
+  icons: bags, bank, warband bank, guild bank, when recorded and not empty; on hover, number of
+  items and date of the record; **click** an icon: its contents, as from the character sheet),
+  **Gold**, **Time played**,
   **Seen** ("online" in green, or when the character was last seen logged in);
 - **when hovering a character**, the details: race, class, specialization, faction, zone, item
   level, gold, time played, **all professions** (level / maximum), **equipment** slot by slot (name
@@ -55,7 +58,8 @@ Right of the **Deposits** button, four icons: **bag** (bags), **gold coins** (ch
 **warband emblem** (account warband bank) and **guild chest** (bank of their guild). On hover: the
 number of items, the number of different items (and the guild bank's gold) and the date of the
 record; on click: the content sheet, the same as from the character details. A bank never opened
-with this character (or a character of the guild) is not recorded yet: the tooltip says so.
+with this character (or a character of the guild) is not recorded yet: the tooltip says so (for
+the character bank: "Bank empty or not recorded yet", an empty bank not being kept).
 
 **Right-click** on an icon: **Reset** clears this record (on this client). Bags are read again at
 once; a bank must be **opened again** to be recorded again (the message reminds you).

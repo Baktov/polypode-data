@@ -340,6 +340,48 @@ local function MainProfession(key, n)
 	end
 end
 
+-- Icônes des sacs et banques (utilisées par l'interface de Blizzard) : texture, ou atlas pour le
+-- bataillon. Boutons de l'en-tête (personnage joué) et colonne « Sacs et banques » du tableau.
+local CONTAINER_SPECS = {
+	{ code = "B", texture = "Interface\\Icons\\INV_Misc_Bag_08" },
+	{ code = "K", texture = "Interface\\Icons\\INV_Misc_Coin_02" },
+	{ code = "A", atlas = "warbands-icon", texture = "Interface\\Icons\\INV_Misc_Coin_17" },
+	{ code = "G", texture = "Interface\\Icons\\achievement_guildperk_mobilebanking" },
+}
+local CONTAINER_SPEC = {}
+for _, spec in ipairs(CONTAINER_SPECS) do
+	CONTAINER_SPEC[spec.code] = spec
+end
+
+-- Pose l'icône d'un sac / d'une banque sur une texture (atlas si le jeu le connaît).
+local function SetContainerIcon(texture, code)
+	local spec = CONTAINER_SPEC[code]
+	if spec.atlas and C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(spec.atlas) then
+		texture:SetAtlas(spec.atlas)
+		texture:SetTexCoord(0, 1, 0, 1)
+	else
+		texture:SetTexture(spec.texture)
+		texture:SetTexCoord(0.08, 0.92, 0.08, 0.92) -- sans le liseré des icônes
+	end
+end
+
+local CharacterContainers -- défini plus bas (avant CharacterEntries)
+
+-- Sacs et banques connus et non vides d'un personnage (colonne d'icônes) : objets, ou or (guilde).
+local function FilledContainers(key)
+	local filled = {}
+	for _, container in ipairs(CharacterContainers(key)) do
+		local total = ContainerCount(container.data)
+		if total > 0 or (container.code == "G" and (tonumber(container.data.m) or 0) > 0) then
+			filled[#filled + 1] = container
+		end
+	end
+	return filled
+end
+
+local CELL_ICON_SIZE = 16
+local CELL_ICON_GAP = 3
+
 local COLUMNS = {
 	{ L["Niveau"], function(key)
 		local identity = Sections(key).I
@@ -371,6 +413,13 @@ local COLUMNS = {
 		return profession and profession.level
 	end, align = "LEFT",
 	tip = { L["Métiers"], L["Second métier principal et son niveau."] } },
+	-- Sacs et banques : 0 à 4 icônes (connus et non vides), clic = contenu (comme la fiche).
+	{ L["Sacs et banques"], function()
+		return ""
+	end, icons = FilledContainers, sort = function(key)
+		return #FilledContainers(key)
+	end, align = "LEFT",
+	tip = { L["Sacs et banques"], L["Sacs, banque, banque de bataillon et banque de guilde relevés et non vides. Clic sur une icône : son contenu."] } },
 	{ L["Or"], function(key)
 		local identity = Sections(key).I
 		return identity and FormatGold(identity.g) or ""
@@ -469,10 +518,16 @@ local function BuildCharacterItems()
 	local used = {}
 	for _, item in ipairs(items) do
 		item.cells = {}
+		item.icons = {}
 		for i, column in ipairs(COLUMNS) do
 			local ok, cell = pcall(column[2], item.key)
 			item.cells[i] = ok and cell or ""
 			used[i] = used[i] or item.cells[i] ~= ""
+			if column.icons then
+				local okIcons, list = pcall(column.icons, item.key)
+				item.icons[i] = okIcons and list or {}
+				used[i] = used[i] or #item.icons[i] > 0
+			end
 		end
 	end
 	if not measure then
@@ -492,6 +547,10 @@ local function BuildCharacterItems()
 			width = Width(header.cells[i])
 			for _, item in ipairs(items) do
 				width = math.max(width, Width(item.cells[i]))
+				local count = item.icons[i] and #item.icons[i] or 0
+				if count > 0 then
+					width = math.max(width, count * (CELL_ICON_SIZE + CELL_ICON_GAP) - CELL_ICON_GAP)
+				end
 			end
 		end
 		columnWidths[i] = width
@@ -748,6 +807,67 @@ end
 -- Lignes du détail d'un personnage (infobulle au survol et fiche épinglée). Une ligne peut avoir
 -- une colonne de droite (right : métiers deux par ligne). noEquipment : sans la liste de
 -- l'équipement (fiche épinglée : il y est montré en icônes, voir ÉQUIPEMENT EN ICÔNES).
+-- Sacs et banques connus d'un personnage, dans l'ordre B, K, A, G : { code, label, title, data,
+-- version, note, open } (open : fiche du contenu, ou Baganator selon l'option). Utilisé par le
+-- détail du personnage et par la colonne d'icônes du tableau.
+CharacterContainers = function(key)
+	local sections, entry = Sections(key)
+	local name = P.GetDisplayName(key)
+	local result = {}
+	local function Read(at)
+		return L["relevée %s"]:format(FormatWhen(at))
+	end
+	for _, part in ipairs({ { "B", L["Sacs"], L["Sacs de %s"] }, { "K", L["Banque"], L["Banque de %s"] } }) do
+		local code = part[1]
+		if sections[code] then
+			local version = entry and tonumber(entry.t[code])
+			result[#result + 1] = { code = code, label = part[2], title = part[3]:format(name), data = sections[code],
+				version = version, note = code == "K" and version and Gray(Read(version)) or nil,
+				open = function()
+					if OpenInBaganator(code, key) then
+						return
+					end
+					OpenCard(part[3]:format(name), function()
+						return ContainerEntries((Sections(key))[code])
+					end)
+				end }
+		end
+	end
+	local account = AccountOf(key)
+	local bank = WarbandBanks()[account]
+	if bank then
+		result[#result + 1] = { code = "A", label = L["Banque de bataillon"], title = L["Banque de bataillon"],
+			data = bank.data, version = bank.version, note = Gray(Read(bank.version)),
+			open = function()
+				if OpenInBaganator("A", key) then
+					return
+				end
+				OpenCard(L["Banque de bataillon"], function()
+					local current = WarbandBanks()[account]
+					return ContainerEntries(current and current.data)
+				end)
+			end }
+	end
+	local guild = (sections.I or {}).gu
+	local guildBank = guild and GuildBanks()[guild]
+	if guildBank then
+		local money = tonumber(guildBank.data.m)
+		result[#result + 1] = { code = "G", label = L["Banque de guilde"], title = L["Banque de guilde %s"]:format(guild),
+			data = guildBank.data, version = guildBank.version,
+			note = Gray(guild .. " · ") .. (money and (FormatGold(money) .. Gray(" · ")) or "") .. Gray(Read(guildBank.version)),
+			open = function()
+				if OpenInBaganator("G", key, guild) then
+					return
+				end
+				OpenCard(L["Banque de guilde %s"]:format(guild), function()
+					local current = GuildBanks()[guild]
+					return ContainerEntries(current and current.data)
+				end)
+			end }
+	end
+	return result
+end
+
 local function CharacterEntries(key, noEquipment)
 	local sections, entry = Sections(key)
 	local identity = sections.I or {}
@@ -833,61 +953,16 @@ local function CharacterEntries(key, noEquipment)
 		end
 	end
 
-	local name = P.GetDisplayName(key)
 	-- Une banque par ligne (nom et nombre d'objets) ; précisions (guilde, or, date du relevé) dans
 	-- l'infobulle de la ligne (note), sur la ligne suivante dans l'infobulle du personnage.
 	local containers = {}
-	local function Counts(data)
-		local total, distinct = ContainerCount(data)
-		return L[" : %d objets (%d différents)"]:format(total, distinct)
-	end
-	local function Read(at)
-		return L["relevée %s"]:format(FormatWhen(at))
-	end
-	for _, part in ipairs({ { "B", L["Sacs"], L["Sacs de %s"] }, { "K", L["Banque"], L["Banque de %s"] } }) do
-		local data = sections[part[1]]
-		if data then
-			containers[#containers + 1] = { "  " .. part[2] .. Counts(data),
-				function()
-					if OpenInBaganator(part[1], key) then
-						return
-					end
-					OpenCard(part[3]:format(name), function()
-						return ContainerEntries((Sections(key))[part[1]])
-					end)
-				end, part[1] == "K" and entry and entry.t.K and Gray(Read(entry.t.K)) or nil }
-		end
-	end
-	local bank = WarbandBanks()[AccountOf(key)]
-	if bank then
-		local account = AccountOf(key)
-		containers[#containers + 1] = { "  " .. L["Banque de bataillon"] .. Counts(bank.data),
-			function()
-				if OpenInBaganator("A", key) then
-					return
-				end
-				OpenCard(L["Banque de bataillon"], function()
-					local current = WarbandBanks()[account]
-					return ContainerEntries(current and current.data)
-				end)
-			end, Gray(Read(bank.version)) }
+	for _, container in ipairs(CharacterContainers(key)) do
+		local total, distinct = ContainerCount(container.data)
+		containers[#containers + 1] = { "  " .. container.label .. L[" : %d objets (%d différents)"]:format(total, distinct),
+			container.open, container.note }
 	end
 	local guild = identity.gu
 	local guildBank = guild and GuildBanks()[guild]
-	if guildBank then
-		local money = tonumber(guildBank.data.m)
-		containers[#containers + 1] = { "  " .. L["Banque de guilde"] .. Counts(guildBank.data),
-			function()
-				if OpenInBaganator("G", key, guild) then
-					return
-				end
-				OpenCard(L["Banque de guilde %s"]:format(guild), function()
-					local current = GuildBanks()[guild]
-					return ContainerEntries(current and current.data)
-				end)
-			end, Gray(guild .. " · ") .. (money and (FormatGold(money) .. Gray(" · ")) or "")
-				.. Gray(Read(guildBank.version)) }
-	end
 	if #containers > 0 then
 		Add(" ")
 		Add("|cffffd200" .. L["Sacs et banques"] .. "|r")
@@ -896,7 +971,7 @@ local function CharacterEntries(key, noEquipment)
 			entries[#entries].note = line[3]
 		end
 		if not (entry and entry.t.K) then
-			Add("  " .. Gray(L["Banque : ouvrez-la une fois avec ce personnage pour la relever"]))
+			Add("  " .. Gray(L["Banque vide ou banque pas encore relevée"]))
 		end
 		if guild and not guildBank then
 			Add("  " .. Gray(L["Banque de guilde : ouvrez-la une fois (avec un personnage de la guilde) pour la relever"]))
@@ -908,13 +983,8 @@ end
 -- SACS ET BANQUES DU PERSONNAGE JOUÉ (boutons de l'en-tête) ----------------------------------
 -- B sacs, K banque, A banque de bataillon de son compte, G banque de guilde de sa guilde : les
 -- mêmes fiches que le détail d'un personnage (ContainerEntries), avec le dernier relevé.
--- Icônes (utilisées par l'interface de Blizzard) : texture, ou atlas pour le bataillon.
-local OWN_CONTAINERS = {
-	{ code = "B", texture = "Interface\\Icons\\INV_Misc_Bag_08" },
-	{ code = "K", texture = "Interface\\Icons\\INV_Misc_Coin_02" },
-	{ code = "A", atlas = "warbands-icon", texture = "Interface\\Icons\\INV_Misc_Coin_17" },
-	{ code = "G", texture = "Interface\\Icons\\achievement_guildperk_mobilebanking" },
-}
+-- Icônes : CONTAINER_SPECS (plus haut).
+local OWN_CONTAINERS = CONTAINER_SPECS
 local CONTAINER_ICON_SIZE = 20
 
 -- { title, data, version, missing } d'un sac / d'une banque du personnage joué.
@@ -926,7 +996,7 @@ local function OwnContainer(code)
 			title = (code == "B" and L["Sacs de %s"] or L["Banque de %s"]):format(P.GetDisplayName(key)),
 			data = sections[code],
 			version = entry and tonumber(entry.t[code]),
-			missing = code == "K" and L["Banque pas encore relevée : ouvrez-la une fois avec ce personnage."]
+			missing = code == "K" and L["Banque vide ou banque pas encore relevée."]
 				or L["Sacs pas encore relevés."],
 		}
 	elseif code == "A" then
@@ -1799,10 +1869,62 @@ local function ColumnsStart(row)
 	return math.max(0, math.min(wanted, rowWidth - total + COLUMN_GAP - 4))
 end
 
+-- Infobulle d'une icône de la colonne « Sacs et banques ».
+local function CellIconTooltip(button)
+	local container = button.container
+	if not container then
+		return
+	end
+	GameTooltip:SetOwner(button, "ANCHOR_TOP")
+	GameTooltip:AddLine(container.title)
+	local total, distinct = ContainerCount(container.data)
+	GameTooltip:AddLine(L["%d objets (%d différents)"]:format(total, distinct), 1, 1, 1)
+	local money = container.code == "G" and tonumber(container.data.m)
+	if money then
+		GameTooltip:AddLine(FormatGold(money), 1, 1, 1)
+	end
+	if container.version then
+		GameTooltip:AddLine(L["Relevé %s"]:format(FormatWhen(container.version)), 0.6, 0.6, 0.6)
+	end
+	GameTooltip:AddLine(L["Clic : contenu détaillé"], 0.6, 0.6, 0.6)
+	ShowTooltip()
+end
+
+-- Bouton d'icône n° j de la colonne i d'une ligne (lignes recyclées : boutons réutilisés).
+local function CellIcon(row, i, j)
+	row.cellIcons = row.cellIcons or {}
+	row.cellIcons[i] = row.cellIcons[i] or {}
+	local button = row.cellIcons[i][j]
+	if not button then
+		button = CreateFrame("Button", nil, row)
+		button:SetSize(CELL_ICON_SIZE, CELL_ICON_SIZE)
+		button:SetFrameLevel(row:GetFrameLevel() + 3)
+		button.icon = button:CreateTexture(nil, "ARTWORK")
+		button.icon:SetAllPoints()
+		button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+		button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+		button:SetScript("OnClick", function(self)
+			if self.container then
+				self.container.open()
+			end
+		end)
+		button:SetScript("OnEnter", CellIconTooltip)
+		button:SetScript("OnLeave", GameTooltip_Hide)
+		row.cellIcons[i][j] = button
+	end
+	return button
+end
+
 local function LayoutCells(row, data)
 	row.cells = row.cells or {}
 	for _, hover in pairs(row.cellHovers or {}) do
 		hover:Hide()
+	end
+	for _, buttons in pairs(row.cellIcons or {}) do
+		for _, button in ipairs(buttons) do
+			button:Hide()
+			button.container = nil
+		end
 	end
 	local offset = ColumnsStart(row)
 	local firstCell
@@ -1822,6 +1944,14 @@ local function LayoutCells(row, data)
 			cell:SetJustifyH(COLUMNS[i] and COLUMNS[i].align or "RIGHT") -- à droite, sauf Métiers
 			cell:SetText(data.cells[i] or "")
 			cell:Show()
+			for j, container in ipairs(data.icons and data.icons[i] or {}) do
+				local button = CellIcon(row, i, j)
+				button.container = container
+				SetContainerIcon(button.icon, container.code)
+				button:ClearAllPoints()
+				button:SetPoint("LEFT", row, "LEFT", offset + (j - 1) * (CELL_ICON_SIZE + CELL_ICON_GAP), 0)
+				button:Show()
+			end
 			offset = offset + width + COLUMN_GAP
 			firstCell = firstCell or cell -- la plus à gauche : le nom s'arrête avant
 			local tip = data.tips and data.tips[i]
@@ -2515,12 +2645,7 @@ local function Build()
 		button:SetPoint("LEFT", previous, "RIGHT", index == 1 and 8 or 4, 0)
 		local icon = button:CreateTexture(nil, "ARTWORK")
 		icon:SetAllPoints()
-		if spec.atlas and C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(spec.atlas) then
-			icon:SetAtlas(spec.atlas)
-		else
-			icon:SetTexture(spec.texture)
-			icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) -- sans le liseré des icônes
-		end
+		SetContainerIcon(icon, spec.code)
 		button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
 		button:SetScript("OnMouseDown", function()
 			icon:SetPoint("TOPLEFT", 1, -1) -- léger enfoncement au clic
