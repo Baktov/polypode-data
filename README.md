@@ -32,7 +32,10 @@ Nécessite **Polypode 0.51.1** ou plus récent.
 Le bouton **Data** (barre de titre de la fenêtre Polypode) ou `/poly data` ouvre une fenêtre
 redimensionnable (poignée du coin bas-droit ; **double-clic** sur sa barre de titre : retour à la taille par défaut ; Échap ferme) :
 
-- l'en-tête de la liste donne le **nombre de personnages** et l'**or total** ;
+- l'en-tête de la liste donne le **nombre de personnages** et l'**or total**, suivis d'icônes de
+  **cumul** : tous les sacs, toutes les banques, toutes les banques de bataillon (pas sur WoW
+  Forever) et toutes les banques de guilde ; au survol, le nombre d'objets ; au **clic**, le contenu
+  additionné de tous les personnages (comptes, guildes), en liste ou en icônes selon l'option ;
 - un **tableau sans trait** (colonnes alignées, en-têtes expliqués au survol) liste tous les
   personnages connus, le personnage joué en tête : **Niveau**, **iLvl** (niveau d'objet équipé),
   **Métiers** (icône et niveau des deux métiers principaux), **Sacs et banques** (de 0 à 4
@@ -230,6 +233,7 @@ other language).*
 
 ## Version
 
+`2.9.0` : icônes de **cumul** après « n personnage(s) · or total » (tous les sacs, banques, banques de bataillon hors WoW Forever, banques de guilde ; clic = contenu additionné) ; clic sur les icônes de la colonne « Sacs et banques » : ouvre bien le contenu selon l'option d'affichage (liste, icônes, Baganator), et plus la fiche du personnage.
 `2.8.1` : WoW Forever : plus d'icône ni de ligne « Banque de bataillon » (elle n'existe pas dans cette version du jeu).
 `2.8.0` : colonne **Sacs et banques** du tableau : de 0 à 4 icônes (sacs, banque, banque de bataillon, banque de guilde) relevées et non vides, clic = contenu ; banque du personnage sans relevé : « Banque vide ou banque pas encore relevée ».
 `2.7.1` : fenêtre du temps de jeu : redimensionnement par la poignée du coin corrigé (plus d'agrandissement d'un coup hors de l'écran ; coin haut-gauche fixe, taille bornée à l'écran).

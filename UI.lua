@@ -1026,6 +1026,74 @@ local function OwnContainer(code)
 	}
 end
 
+-- CUMUL DE TOUS LES SACS / BANQUES (icônes de la ligne « n personnage(s) · or total ») -------------
+-- B : sacs de tous les personnages, K : leurs banques, A : banques de bataillon de tous les
+-- comptes, G : banques de guilde de toutes les guildes (or compris). Renvoie le contenu cumulé
+-- (même forme qu'une section : i<itemID> = nombre, m = or) et le nombre de relevés non vides.
+local TOTAL_TITLES = {
+	B = L["Tous les sacs"],
+	K = L["Toutes les banques"],
+	A = L["Toutes les banques de bataillon"],
+	G = L["Toutes les banques de guilde"],
+}
+
+local function TotalContainer(code)
+	local merged, sources = {}, 0
+	local function Merge(data)
+		local any = false
+		for itemKey, count in pairs(data or {}) do
+			if tostring(itemKey):match("^i%d+$") then
+				merged[itemKey] = (merged[itemKey] or 0) + (tonumber(count) or 0)
+				any = true
+			end
+		end
+		local money = code == "G" and tonumber((data or {}).m)
+		if money then
+			merged.m = (merged.m or 0) + money
+			any = any or money > 0
+		end
+		if any then
+			sources = sources + 1
+		end
+	end
+	if code == "B" or code == "K" then
+		for key in pairs(ns.GetKeys()) do
+			Merge(Sections(key)[code])
+		end
+	elseif code == "A" then
+		for _, bank in pairs(WarbandBanks()) do
+			Merge(bank.data)
+		end
+	else
+		for _, bank in pairs(GuildBanks()) do
+			Merge(bank.data)
+		end
+	end
+	return merged, sources
+end
+
+local function TotalContainerTooltip(owner, code)
+	local data, sources = TotalContainer(code)
+	local total, distinct = ContainerCount(data)
+	GameTooltip:SetOwner(owner, "ANCHOR_TOP")
+	GameTooltip:AddLine(TOTAL_TITLES[code])
+	GameTooltip:AddLine(L["%d objets (%d différents)"]:format(total, distinct), 1, 1, 1)
+	if code == "G" and data.m then
+		GameTooltip:AddLine(FormatGold(data.m), 1, 1, 1)
+	end
+	GameTooltip:AddLine(L["Cumul de %d relevé(s)"]:format(sources), 0.6, 0.6, 0.6)
+	GameTooltip:AddLine(L["Clic : contenu cumulé"], 0.6, 0.6, 0.6)
+	ShowTooltip()
+end
+
+-- Fiche du contenu cumulé (liste ou icônes selon l'option ; Baganator n'a pas de vue cumulée :
+-- grille d'icônes), relue à chaque rafraîchissement.
+local function OpenTotalContainer(code)
+	OpenCard(TOTAL_TITLES[code], function()
+		return ContainerEntries((TotalContainer(code)))
+	end)
+end
+
 local REOPEN_HINT_SHORT = {
 	B = L["sacs relus aussitôt"],
 	K = L["à rouvrir pour la relever"],
@@ -1922,7 +1990,19 @@ local function CellIcon(row, i, j)
 	return button
 end
 
+-- Icône de sac / banque sous la souris dans une ligne, ou nil (clic de la ligne : voir onClick).
+local function CellIconUnderMouse(row)
+	for _, buttons in pairs(row and row.cellIcons or {}) do
+		for _, button in ipairs(buttons) do
+			if button:IsShown() and button.container and button:IsMouseOver() then
+				return button
+			end
+		end
+	end
+end
+
 local function LayoutCells(row, data)
+	data.cellRow = row -- ligne affichant cette donnée (CellIconUnderMouse)
 	row.cells = row.cells or {}
 	for _, hover in pairs(row.cellHovers or {}) do
 		hover:Hide()
@@ -1953,6 +2033,9 @@ local function LayoutCells(row, data)
 			cell:Show()
 			for j, container in ipairs(data.icons and data.icons[i] or {}) do
 				local button = CellIcon(row, i, j)
+				-- Au-dessus de la ligne à chaque passage (lignes recyclées par la liste) : sinon le
+				-- clic peut tomber sur la ligne, qui ouvre la fiche du personnage.
+				button:SetFrameLevel(row:GetFrameLevel() + 3)
 				button.container = container
 				SetContainerIcon(button.icon, container.code)
 				button:ClearAllPoints()
@@ -2765,6 +2848,29 @@ local function Build()
 	listPanel:SetPoint("TOPLEFT", 12, -36)
 	listPanel:SetPoint("BOTTOMRIGHT", -12, 12)
 
+	-- Icônes du cumul de tous les sacs / banques, après le texte de l'en-tête de la liste (placées
+	-- par ns.Refresh, affichées seulement pour le tableau des personnages et si non vides).
+	listPanel.totalButtons = {}
+	for _, spec in ipairs(CONTAINER_SPECS) do
+		local button = CreateFrame("Button", nil, listPanel)
+		button:SetSize(CELL_ICON_SIZE, CELL_ICON_SIZE)
+		button:SetFrameLevel(listPanel:GetFrameLevel() + 5)
+		local icon = button:CreateTexture(nil, "ARTWORK")
+		icon:SetAllPoints()
+		SetContainerIcon(icon, spec.code)
+		button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+		button.code = spec.code
+		button:SetScript("OnClick", function(self)
+			OpenTotalContainer(self.code)
+		end)
+		button:SetScript("OnEnter", function(self)
+			TotalContainerTooltip(self, self.code)
+		end)
+		button:SetScript("OnLeave", GameTooltip_Hide)
+		button:Hide()
+		listPanel.totalButtons[#listPanel.totalButtons + 1] = button
+	end
+
 	-- Poignée de redimensionnement (coin bas-droit), taille gardée dans PolypodeDataDB.window.
 	local grip = CreateFrame("Button", nil, frame)
 	grip:SetSize(16, 16)
@@ -2826,6 +2932,12 @@ local function Build()
 				return
 			elseif not data.key then
 				return
+			end
+			-- Clic arrivé à la ligne alors que la souris est sur une icône de sac / banque : c'est
+			-- l'icône qui l'ouvre (selon l'option d'affichage), pas la fiche du personnage.
+			local icon = CellIconUnderMouse(data.cellRow)
+			if icon then
+				icon.container.open()
 			elseif button == "RightButton" then
 				ShowForgetMenu(data.key)
 			else
@@ -2920,6 +3032,17 @@ function ns.Refresh()
 	end
 	listPanel.header:SetText(header)
 	listPanel.emptyText:SetText(emptyText)
+	-- Icônes du cumul des sacs / banques, juste après le texte (tableau des personnages seulement).
+	local offset = math.ceil(listPanel.header:GetStringWidth()) + 10
+	for _, button in ipairs(listPanel.totalButtons or {}) do
+		local shown = not searching and not recipeSearching and select(2, TotalContainer(button.code)) > 0
+		button:SetShown(shown)
+		if shown then
+			button:ClearAllPoints()
+			button:SetPoint("LEFT", listPanel.header, "LEFT", offset, 0)
+			offset = offset + CELL_ICON_SIZE + CELL_ICON_GAP
+		end
+	end
 	P.SetListData(listPanel, items)
 end
 

@@ -30,7 +30,10 @@ Requires **Polypode 0.51.1** or later.
 The **Data** button (title bar of the Polypode window) or `/poly data` opens a resizable window
 (bottom-right corner grip; **double-click** its title bar: back to the default size; Escape closes it):
 
-- the list header gives the **number of characters** and the **total gold**;
+- the list header gives the **number of characters** and the **total gold**, followed by
+  **total** icons: all bags, all banks, all warband banks (not on WoW Forever) and all guild banks;
+  on hover, the number of items; on **click**, the combined contents of every character (accounts,
+  guilds), as a list or icons depending on the option;
 - a **borderless table** (aligned columns, headers explained on hover) lists every known
   character, the current character first: **Level**, **iLvl** (equipped item level),
   **Professions** (icon and level of the two main professions), **Bags and banks** (0 to 4
