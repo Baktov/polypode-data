@@ -67,6 +67,12 @@ local function IconView()
 	return view == "icons" or view == "baganator"
 end
 
+-- Affichage des cumuls (option « Contenu des cumuls », 2.10.0) : "list" ou "icons" (défaut).
+local function TotalView()
+	local view = PolypodeDataDB and PolypodeDataDB.totalView
+	return view == "list" and "list" or "icons"
+end
+
 -- FORMATAGE ------------------------------------------------------------------------------------
 
 local function Icon(fileID, size)
@@ -1117,12 +1123,12 @@ local function TotalContainerTooltip(owner, code)
 	ShowTooltip()
 end
 
--- Fiche du contenu cumulé (liste ou icônes selon l'option ; Baganator n'a pas de vue cumulée :
--- grille d'icônes), relue à chaque rafraîchissement.
+-- Fiche du contenu cumulé, en liste ou en icônes selon l'option « Contenu des cumuls »
+-- (TotalView ; Baganator n'a pas de vue cumulée), relue à chaque rafraîchissement.
 local function OpenTotalContainer(code)
 	OpenCard(TOTAL_TITLES[code], function()
 		return ContainerEntries((TotalContainer(code)))
-	end)
+	end, nil, nil, nil, TotalView)
 end
 
 local REOPEN_HINT_SHORT = {
@@ -1436,7 +1442,14 @@ local function FillCard(card)
 	card.TitleText:SetText(card.title)
 	card.TitleText:SetPoint("RIGHT", card.action and card.actionButton or card.CloseButton, "LEFT", -4, 0)
 	-- Contenu d'un sac ou d'une banque en icônes (option) : liste en rangées d'icônes.
-	local grid = entries.items and IconView() and card.gridPanel ~= nil
+	-- card.view : réglage propre à la fiche (cumuls : TotalView), sinon l'option commune.
+	local iconView
+	if card.view then
+		iconView = card.view() == "icons"
+	else
+		iconView = IconView()
+	end
+	local grid = entries.items and iconView and card.gridPanel ~= nil
 	if card.gridPanel then
 		card.gridPanel:SetShown(grid)
 	end
@@ -1643,7 +1656,7 @@ end
 -- Ouvre une fiche épinglée titrée title, dont build() renvoie les lignes (relu à chaque
 -- rafraîchissement de la fenêtre), près du curseur, décalée des fiches déjà ouvertes ; empty :
 -- texte si vide ; action : bouton et ligne d'état (voir UpdateCardAction), nil = aucun.
-OpenCard = function(title, build, empty, action, gearKey)
+OpenCard = function(title, build, empty, action, gearKey, view)
 	local card
 	-- Une seule fiche par personnage : déjà ouverte, elle est ramenée au premier plan, sur place.
 	if gearKey then
@@ -1663,6 +1676,7 @@ OpenCard = function(title, build, empty, action, gearKey)
 	end
 	card = card or CreateCard()
 	card.title, card.build, card.empty, card.action, card.gearKey = title, build, empty, action, gearKey
+	card.view = view -- affichage propre à la fiche (cumuls : TotalView), sinon nil = option commune
 	local scale = UIParent:GetEffectiveScale()
 	local x, y = GetCursorPosition()
 	card:ClearAllPoints()
@@ -3149,11 +3163,32 @@ local function BuildSettingsPanel()
 		end
 		return container:GetData()
 	end, tooltip)
+	-- Cumuls (icônes après « n personnage(s) · or total ») : réglage à part, liste ou icônes
+	-- (Baganator n'affiche pas plusieurs personnages additionnés) (2.10.0).
+	local totalSetting = Settings.RegisterProxySetting(category, "POLYPODE_DATA_TOTAL_VIEW",
+		Settings.VarType.String, L["Contenu des cumuls"], "icons",
+		TotalView,
+		function(value)
+			PolypodeDataDB.totalView = value
+			RefreshCards()
+		end)
+	local totalValues = { { "list", L["Liste"] }, { "icons", L["Icônes"] } }
+	local totalTooltip = L["Affichage du contenu cumulé de tous les sacs, de toutes les banques... (clic sur une "
+		.. "icône de cumul, après le nombre de personnages et l'or total) : une ligne par objet, ou une grille d'icônes."]
+	totalTooltip = P.ColorClicks and P.ColorClicks(totalTooltip) or totalTooltip
+	Settings.CreateDropdown(category, totalSetting, function()
+		local container = Settings.CreateControlTextContainer()
+		for _, value in ipairs(totalValues) do
+			container:Add(value[1], value[2])
+		end
+		return container:GetData()
+	end, totalTooltip)
 	Settings.RegisterAddOnCategory(category)
 	settingsCategory = category
-	-- Même réglage dans la petite fenêtre du clic droit sur le bouton « Data » (Polypode 0.57.0).
+	-- Mêmes réglages dans la petite fenêtre du clic droit sur le bouton « Data » (Polypode 0.57.0).
 	settingsPopup = { key = "Data", title = L["Options de Polypode Data"], category = category,
-		items = { { kind = "dropdown", setting = setting, values = values, tooltip = tooltip } } }
+		items = { { kind = "dropdown", setting = setting, values = values, tooltip = tooltip },
+			{ kind = "dropdown", setting = totalSetting, values = totalValues, tooltip = totalTooltip } } }
 end
 
 local settingsEvents = CreateFrame("Frame")

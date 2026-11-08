@@ -35,7 +35,8 @@ redimensionnable (poignée du coin bas-droit ; **double-clic** sur sa barre de t
 - l'en-tête de la liste donne le **nombre de personnages** et l'**or total**, suivis d'icônes de
   **cumul** : tous les sacs, toutes les banques, toutes les banques de bataillon (pas sur WoW
   Forever) et toutes les banques de guilde ; au survol, le nombre d'objets ; au **clic**, le contenu
-  additionné de tous les personnages (comptes, guildes), en liste ou en icônes selon l'option ;
+  additionné de tous les personnages (comptes, guildes), en liste ou en icônes selon l'option
+  **Contenu des cumuls** ;
 - un **tableau sans trait** (colonnes alignées, en-têtes expliqués au survol) liste tous les
   personnages connus, le personnage joué en tête : **Niveau**, **iLvl** (niveau d'objet équipé),
   **Métiers** (icône et niveau des deux métiers principaux), **Sacs et banques** (de 0 à 4
@@ -233,6 +234,7 @@ other language).*
 
 ## Version
 
+`2.10.0` : option **Contenu des cumuls** (Liste / Icônes, icônes par défaut), à part de « Contenu des sacs et banques » : affichage des fiches de cumul (tous les sacs, banques...).
 `2.9.1` : option « Baganator » sur WoW Forever : les sacs, banques et banques de guilde des personnages s'ouvrent bien dans Baganator (Syndicator les nomme « Prénom Nom-PvE » ; Polypode Data ne les trouvait pas et montrait sa grille d'icônes). Les icônes de cumul restent en grille : Baganator n'a pas de vue de plusieurs personnages additionnés.
 `2.9.0` : icônes de **cumul** après « n personnage(s) · or total » (tous les sacs, banques, banques de bataillon hors WoW Forever, banques de guilde ; clic = contenu additionné) ; clic sur les icônes de la colonne « Sacs et banques » : ouvre bien le contenu selon l'option d'affichage (liste, icônes, Baganator), et plus la fiche du personnage.
 `2.8.1` : WoW Forever : plus d'icône ni de ligne « Banque de bataillon » (elle n'existe pas dans cette version du jeu).

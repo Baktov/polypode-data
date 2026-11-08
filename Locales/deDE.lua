@@ -97,6 +97,8 @@ P.AddTranslations(ns.L, "deDE", {
 	["Toutes les banques de guilde"] = "Alle Gildenbanken",
 	["Cumul de %d relevé(s)"] = "Summe aus %d Erfassung(en)",
 	["Clic : contenu cumulé"] = "Klick: gesamter Inhalt",
+	["Contenu des cumuls"] = "Inhalt der Summen",
+	["Affichage du contenu cumulé de tous les sacs, de toutes les banques... (clic sur une icône de cumul, après le nombre de personnages et l'or total) : une ligne par objet, ou une grille d'icônes."] = "Anzeige des summierten Inhalts aller Taschen, aller Banken... (Klick auf ein Summensymbol, nach der Anzahl der Charaktere und dem Gesamtgold): eine Zeile pro Gegenstand oder ein Symbolraster.",
 	["Sacs et banques"] = "Taschen und Banken",
 	["Sacs, banque, banque de bataillon et banque de guilde relevés et non vides. Clic sur une icône : son contenu."] = "Taschen, Bank, Kriegsmeutenbank und Gildenbank, erfasst und nicht leer. Klick auf ein Symbol: sein Inhalt.",
 	["Clic : contenu détaillé"] = "Klick: detaillierter Inhalt",
