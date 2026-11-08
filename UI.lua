@@ -423,6 +423,8 @@ end
 if not HAS_WARBAND_BANK then
 	table.remove(CONTAINER_SPECS, 3) -- « A »
 end
+-- Cumul complet (« ALL », en-tête de la liste seulement) : coffre ouvert qui déborde (2.12.0).
+CONTAINER_SPEC.ALL = { code = "ALL", texture = "Interface\\Icons\\trade_archaeology_chestoftinyglassanimals" }
 
 -- Pose l'icône d'un sac / d'une banque sur une texture (atlas si le jeu le connaît).
 local function SetContainerIcon(texture, code)
@@ -1092,16 +1094,21 @@ end
 
 -- CUMUL DE TOUS LES SACS / BANQUES (icônes de la ligne « n personnage(s) · or total ») -------------
 -- B : sacs de tous les personnages, K : leurs banques, A : banques de bataillon de tous les
--- comptes, G : banques de guilde de toutes les guildes (or compris). Renvoie le contenu cumulé
--- (même forme qu'une section : i<itemID> = nombre, m = or) et le nombre de relevés non vides.
+-- comptes, G : banques de guilde de toutes les guildes (or compris), ALL : les quatre ensemble
+-- (2.12.0). Sans doublon : une seule banque de bataillon par compte et une seule banque de guilde
+-- par guilde (WarbandBanks, GuildBanks : le relevé le plus récent), sacs et banque propres à
+-- chaque personnage. Renvoie le contenu cumulé (même forme qu'une section : i<itemID> = nombre,
+-- m = or) et le nombre de relevés non vides.
 local TOTAL_TITLES = {
 	B = L["Tous les sacs"],
 	K = L["Toutes les banques"],
 	A = L["Toutes les banques de bataillon"],
 	G = L["Toutes les banques de guilde"],
+	ALL = L["Tous les sacs et toutes les banques"],
 }
 
-local function TotalContainer(code)
+local TotalContainer
+TotalContainer = function(code)
 	local merged, sources = {}, 0
 	local function Merge(data)
 		local any = false
@@ -1111,7 +1118,7 @@ local function TotalContainer(code)
 				any = true
 			end
 		end
-		local money = code == "G" and tonumber((data or {}).m)
+		local money = (code == "G" or code == "ALL") and tonumber((data or {}).m)
 		if money then
 			merged.m = (merged.m or 0) + money
 			any = any or money > 0
@@ -1120,7 +1127,17 @@ local function TotalContainer(code)
 			sources = sources + 1
 		end
 	end
-	if code == "B" or code == "K" then
+	if code == "ALL" then
+		for _, part in ipairs({ "B", "K", "A", "G" }) do
+			if part ~= "A" or HAS_WARBAND_BANK then
+				local data, count = TotalContainer(part)
+				sources = sources + count
+				local before = sources
+				Merge(data)
+				sources = before -- déjà comptés par relevé ci-dessus
+			end
+		end
+	elseif code == "B" or code == "K" then
 		for key in pairs(ns.GetKeys()) do
 			Merge(Sections(key)[code])
 		end
@@ -1142,10 +1159,13 @@ local function TotalContainerTooltip(owner, code)
 	GameTooltip:SetOwner(owner, "ANCHOR_TOP")
 	GameTooltip:AddLine(TOTAL_TITLES[code])
 	GameTooltip:AddLine(L["%d objets (%d différents)"]:format(total, distinct), 1, 1, 1)
-	if code == "G" and data.m then
+	if (code == "G" or code == "ALL") and data.m then
 		GameTooltip:AddLine(FormatGold(data.m), 1, 1, 1)
 	end
 	GameTooltip:AddLine(L["Cumul de %d relevé(s)"]:format(sources), 0.6, 0.6, 0.6)
+	if code == "ALL" then
+		GameTooltip:AddLine(L["Sans doublon : une banque de bataillon par compte, une banque de guilde par guilde."], 0.6, 0.6, 0.6, true)
+	end
 	GameTooltip:AddLine(L["Clic : contenu cumulé"], 0.6, 0.6, 0.6)
 	ShowTooltip()
 end
@@ -2923,7 +2943,12 @@ local function Build()
 	-- Icônes du cumul de tous les sacs / banques, après le texte de l'en-tête de la liste (placées
 	-- par ns.Refresh, affichées seulement pour le tableau des personnages et si non vides).
 	listPanel.totalButtons = {}
+	local totalSpecs = {}
 	for _, spec in ipairs(CONTAINER_SPECS) do
+		totalSpecs[#totalSpecs + 1] = spec
+	end
+	totalSpecs[#totalSpecs + 1] = CONTAINER_SPEC.ALL
+	for _, spec in ipairs(totalSpecs) do
 		local button = CreateFrame("Button", nil, listPanel)
 		button:SetSize(CELL_ICON_SIZE, CELL_ICON_SIZE)
 		button:SetFrameLevel(listPanel:GetFrameLevel() + 5)

@@ -100,6 +100,8 @@ P.AddTranslations(ns.L, "ptBR", {
 	["Contenu des cumuls"] = "Conteúdo dos totais",
 	["Affichage du contenu cumulé de tous les sacs, de toutes les banques... (clic sur une icône de cumul, après le nombre de personnages et l'or total) : une ligne par objet, ou une grille d'icônes."] = "Exibição do conteúdo somado de todas as bolsas, todos os bancos... (clique em um ícone de total, após o número de personagens e o ouro total): uma linha por item ou uma grade de ícones.",
 	["Meilleur niveau de chaque métier"] = "Melhor nível de cada profissão",
+	["Tous les sacs et toutes les banques"] = "Todas as bolsas e todos os bancos",
+	["Sans doublon : une banque de bataillon par compte, une banque de guilde par guilde."] = "Sem duplicatas: um banco do bando de guerra por conta, um banco da guilda por guilda.",
 	["Sacs et banques"] = "Bolsas e bancos",
 	["Sacs, banque, banque de bataillon et banque de guilde relevés et non vides. Clic sur une icône : son contenu."] = "Bolsas, banco, banco do bando de guerra e banco da guilda registrados e não vazios. Clique em um ícone: seu conteúdo.",
 	["Clic : contenu détaillé"] = "Clique: conteúdo detalhado",

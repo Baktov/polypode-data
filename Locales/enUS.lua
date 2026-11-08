@@ -100,6 +100,8 @@ P.AddTranslations(ns.L, "enUS", {
 	["Contenu des cumuls"] = "Totals content",
 	["Affichage du contenu cumulé de tous les sacs, de toutes les banques... (clic sur une icône de cumul, après le nombre de personnages et l'or total) : une ligne par objet, ou une grille d'icônes."] = "Display of the combined contents of all bags, all banks... (click a total icon, after the number of characters and total gold): one line per item, or an icon grid.",
 	["Meilleur niveau de chaque métier"] = "Best level of each profession",
+	["Tous les sacs et toutes les banques"] = "All bags and all banks",
+	["Sans doublon : une banque de bataillon par compte, une banque de guilde par guilde."] = "No duplicates: one warband bank per account, one guild bank per guild.",
 	["Sacs et banques"] = "Bags and banks",
 	["Sacs, banque, banque de bataillon et banque de guilde relevés et non vides. Clic sur une icône : son contenu."] = "Bags, bank, warband bank and guild bank recorded and not empty. Click an icon: its contents.",
 	["Clic : contenu détaillé"] = "Click: detailed content",

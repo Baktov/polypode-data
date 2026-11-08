@@ -34,7 +34,8 @@ redimensionnable (poignée du coin bas-droit ; **double-clic** sur sa barre de t
 
 - l'en-tête de la liste donne le **nombre de personnages** et l'**or total**, suivis d'icônes de
   **cumul** : tous les sacs, toutes les banques, toutes les banques de bataillon (pas sur WoW
-  Forever) et toutes les banques de guilde ; au survol, le nombre d'objets ; au **clic**, le contenu
+  Forever), toutes les banques de guilde, et le **cumul complet** (coffre qui déborde : tout
+  ensemble, sans doublon — une banque de bataillon par compte, une banque de guilde par guilde) ; au survol, le nombre d'objets ; au **clic**, le contenu
   additionné de tous les personnages (comptes, guildes), en liste ou en icônes selon l'option
   **Contenu des cumuls** ; enfin, une icône par **métier** avec le meilleur niveau atteint parmi tous les
   personnages (au survol : nom du métier, niveau et personnage) ;
@@ -235,6 +236,7 @@ other language).*
 
 ## Version
 
+`2.12.0` : icône de **cumul complet** (coffre qui déborde) à droite des cumuls : tous les sacs et toutes les banques ensemble, sans doublon (une banque de bataillon par compte, une banque de guilde par guilde) ; affichage selon l'option « Contenu des cumuls ».
 `2.11.0` : en-tête de la liste : « · » entre l'or total et les icônes de cumul, puis « · » et une icône par métier avec le meilleur niveau atteint parmi tous les personnages (au survol : nom, niveau et personnage).
 `2.10.0` : option **Contenu des cumuls** (Liste / Icônes, icônes par défaut), à part de « Contenu des sacs et banques » : affichage des fiches de cumul (tous les sacs, banques...).
 `2.9.1` : option « Baganator » sur WoW Forever : les sacs, banques et banques de guilde des personnages s'ouvrent bien dans Baganator (Syndicator les nomme « Prénom Nom-PvE » ; Polypode Data ne les trouvait pas et montrait sa grille d'icônes). Les icônes de cumul restent en grille : Baganator n'a pas de vue de plusieurs personnages additionnés.

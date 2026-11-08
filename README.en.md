@@ -31,7 +31,9 @@ The **Data** button (title bar of the Polypode window) or `/poly data` opens a r
 (bottom-right corner grip; **double-click** its title bar: back to the default size; Escape closes it):
 
 - the list header gives the **number of characters** and the **total gold**, followed by
-  **total** icons: all bags, all banks, all warband banks (not on WoW Forever) and all guild banks;
+  **total** icons: all bags, all banks, all warband banks (not on WoW Forever), all guild banks and the
+  **complete total** (overflowing chest: everything together, no duplicates — one warband bank per
+  account, one guild bank per guild);
   on hover, the number of items; on **click**, the combined contents of every character (accounts,
   guilds), as a list or icons depending on the **Totals content** option; then one icon per **profession** with the best level
   reached among all characters (on hover: profession, level and character);
