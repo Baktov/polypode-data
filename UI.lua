@@ -207,6 +207,33 @@ local function Professions(key)
 	return list
 end
 
+-- Meilleur niveau de chaque métier parmi tous les personnages (en-tête de la liste, 2.11.0) :
+-- { skillLine, icon, name, level, key, main }, métiers principaux d'abord, puis par nom.
+local function BestProfessions()
+	local best = {}
+	for key in pairs(ns.GetKeys()) do
+		for _, profession in ipairs(Professions(key)) do
+			local id = profession.skillLine
+			local current = best[id]
+			if profession.level and (not current or profession.level > current.level) then
+				best[id] = { skillLine = id, icon = profession.icon, name = profession.name, level = profession.level,
+					key = key, main = profession.slot == "p1" or profession.slot == "p2" }
+			end
+		end
+	end
+	local list = {}
+	for _, profession in pairs(best) do
+		list[#list + 1] = profession
+	end
+	table.sort(list, function(a, b)
+		if a.main ~= b.main then
+			return a.main
+		end
+		return a.name < b.name
+	end)
+	return list
+end
+
 -- Nom d'objet (couleur de qualité) ; demandé au serveur s'il n'est pas encore connu.
 local function ItemName(itemID)
 	local name = C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(itemID)
@@ -2915,6 +2942,26 @@ local function Build()
 		button:Hide()
 		listPanel.totalButtons[#listPanel.totalButtons + 1] = button
 	end
+	-- Métiers : une icône par métier et le meilleur niveau (placés par ns.Refresh) ; infobulle =
+	-- nom, niveau et personnage qui l'a atteint.
+	listPanel.professionText = listPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	listPanel.professionText:SetWordWrap(false)
+	listPanel.professionText:Hide()
+	local professionHover = CreateFrame("Frame", nil, listPanel)
+	professionHover:SetFrameLevel(listPanel:GetFrameLevel() + 5)
+	professionHover:EnableMouse(true)
+	professionHover:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_TOP")
+		GameTooltip:AddLine(L["Meilleur niveau de chaque métier"])
+		for _, profession in ipairs(self.professions or {}) do
+			GameTooltip:AddDoubleLine(Icon(profession.icon) .. " " .. profession.name,
+				profession.level .. Gray("  " .. CharacterName(profession.key)), 1, 1, 1, 1, 1, 1)
+		end
+		ShowTooltip()
+	end)
+	professionHover:SetScript("OnLeave", GameTooltip_Hide)
+	professionHover:Hide()
+	listPanel.professionHover = professionHover
 
 	-- Poignée de redimensionnement (coin bas-droit), taille gardée dans PolypodeDataDB.window.
 	local grip = CreateFrame("Button", nil, frame)
@@ -3075,17 +3122,49 @@ function ns.Refresh()
 		header = L["%d personnage(s)"]:format(count) .. "  " .. Gray(L["· or total :"]) .. " " .. FormatGold(TotalGold())
 		emptyText = L["Aucune donnée enregistrée."]
 	end
+	-- Tableau des personnages : « · » puis icônes du cumul des sacs / banques, « · » puis une icône
+	-- par métier avec le meilleur niveau atteint (2.11.0).
+	local characters = not searching and not recipeSearching
+	local bagsShown = {}
+	local anyBags = false
+	for index, button in ipairs(listPanel.totalButtons or {}) do
+		bagsShown[index] = characters and select(2, TotalContainer(button.code)) > 0
+		anyBags = anyBags or bagsShown[index]
+	end
+	local professions = characters and BestProfessions() or {}
+	if anyBags or #professions > 0 then
+		header = header .. Gray("  ·")
+	end
 	listPanel.header:SetText(header)
 	listPanel.emptyText:SetText(emptyText)
-	-- Icônes du cumul des sacs / banques, juste après le texte (tableau des personnages seulement).
-	local offset = math.ceil(listPanel.header:GetStringWidth()) + 10
-	for _, button in ipairs(listPanel.totalButtons or {}) do
-		local shown = not searching and not recipeSearching and select(2, TotalContainer(button.code)) > 0
-		button:SetShown(shown)
-		if shown then
+	local offset = math.ceil(listPanel.header:GetStringWidth()) + 8
+	for index, button in ipairs(listPanel.totalButtons or {}) do
+		button:SetShown(bagsShown[index])
+		if bagsShown[index] then
 			button:ClearAllPoints()
 			button:SetPoint("LEFT", listPanel.header, "LEFT", offset, 0)
 			offset = offset + CELL_ICON_SIZE + CELL_ICON_GAP
+		end
+	end
+	local professionText, professionHover = listPanel.professionText, listPanel.professionHover
+	if professionText then
+		if #professions > 0 then
+			local parts = {}
+			for _, profession in ipairs(professions) do
+				parts[#parts + 1] = Icon(profession.icon) .. " " .. profession.level
+			end
+			professionText:SetText((anyBags and (Gray("·") .. "  ") or "") .. table.concat(parts, "   "))
+			professionText:ClearAllPoints()
+			professionText:SetPoint("LEFT", listPanel.header, "LEFT", offset + (anyBags and 5 or 0), 0)
+			professionText:Show()
+			professionHover.professions = professions
+			professionHover:ClearAllPoints()
+			professionHover:SetPoint("TOPLEFT", professionText, "TOPLEFT", 0, 2)
+			professionHover:SetSize(math.ceil(professionText:GetStringWidth()), professionText:GetStringHeight() + 4)
+			professionHover:Show()
+		else
+			professionText:Hide()
+			professionHover:Hide()
 		end
 	end
 	P.SetListData(listPanel, items)
