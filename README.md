@@ -233,6 +233,7 @@ other language).*
 
 ## Version
 
+`2.9.1` : option « Baganator » sur WoW Forever : les sacs, banques et banques de guilde des personnages s'ouvrent bien dans Baganator (Syndicator les nomme « Prénom Nom-PvE » ; Polypode Data ne les trouvait pas et montrait sa grille d'icônes). Les icônes de cumul restent en grille : Baganator n'a pas de vue de plusieurs personnages additionnés.
 `2.9.0` : icônes de **cumul** après « n personnage(s) · or total » (tous les sacs, banques, banques de bataillon hors WoW Forever, banques de guilde ; clic = contenu additionné) ; clic sur les icônes de la colonne « Sacs et banques » : ouvre bien le contenu selon l'option d'affichage (liste, icônes, Baganator), et plus la fiche du personnage.
 `2.8.1` : WoW Forever : plus d'icône ni de ligne « Banque de bataillon » (elle n'existe pas dans cette version du jeu).
 `2.8.0` : colonne **Sacs et banques** du tableau : de 0 à 4 icônes (sacs, banque, banque de bataillon, banque de guilde) relevées et non vides, clic = contenu ; banque du personnage sans relevé : « Banque vide ou banque pas encore relevée ».

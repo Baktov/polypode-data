@@ -274,16 +274,32 @@ end
 
 -- Nom Syndicator « Nom-RoyaumeNormalisé » (royaume sans espaces ni tirets) d'une clé de Polypode
 -- « Nom-Royaume », ou nil s'il ne le connaît pas.
+-- WoW Forever (2.9.1) : Syndicator nomme les personnages « Prénom Nom-<royaume du jeu> »
+-- (« Zarine Nibashere-PvE ») et non « Prénom-Royaume » : repli sur le nom affiché par Polypode
+-- (prénom et nom de famille), comparé au champ details.character de chaque relevé.
 local function SyndicatorCharacter(key)
 	if key == P.GetCharKey() and Syndicator.API.GetCurrentCharacter then
 		return Syndicator.API.GetCurrentCharacter()
 	end
 	local name, realm = key:match("^([^%-]+)%-(.+)$")
 	local full = name and (name .. "-" .. realm:gsub("[%s%-]", ""))
-	return full and Syndicator.API.GetByCharacterFullName(full) and full or nil
+	if full and Syndicator.API.GetByCharacterFullName(full) then
+		return full
+	end
+	local display = P.GetDisplayName(key)
+	if display == key or not Syndicator.API.GetAllCharacters then
+		return nil
+	end
+	for _, candidate in ipairs(Syndicator.API.GetAllCharacters() or {}) do
+		local data = Syndicator.API.GetByCharacterFullName(candidate)
+		if data and data.details and data.details.character == display then
+			return candidate
+		end
+	end
 end
 
--- Nom Syndicator « Guilde-RoyaumeNormalisé » de la guilde d'un personnage, ou nil.
+-- Nom Syndicator « Guilde-RoyaumeNormalisé » de la guilde d'un personnage, ou nil. Repli
+-- (WoW Forever, royaume nommé autrement) : seule guilde de Syndicator à ce nom.
 local function SyndicatorGuild(key, guild)
 	local current = Syndicator.API.GetCurrentGuild and Syndicator.API.GetCurrentGuild()
 	if current and guild == (Sections(P.GetCharKey()).I or {}).gu then
@@ -291,7 +307,22 @@ local function SyndicatorGuild(key, guild)
 	end
 	local realm = key:match("^[^%-]+%-(.+)$")
 	local full = realm and (guild .. "-" .. realm:gsub("[%s%-]", ""))
-	return full and Syndicator.API.GetByGuildFullName and Syndicator.API.GetByGuildFullName(full) and full or nil
+	if full and Syndicator.API.GetByGuildFullName and Syndicator.API.GetByGuildFullName(full) then
+		return full
+	end
+	if not Syndicator.API.GetAllGuilds then
+		return nil
+	end
+	local found
+	for _, candidate in ipairs(Syndicator.API.GetAllGuilds() or {}) do
+		if candidate:sub(1, #guild + 1) == guild .. "-" then
+			if found then
+				return nil -- plusieurs guildes à ce nom : on ne devine pas
+			end
+			found = candidate
+		end
+	end
+	return found
 end
 
 -- Ouvre dans Baganator le sac / la banque `code` (B, K, A, G) du personnage `key` ; renvoie vrai
