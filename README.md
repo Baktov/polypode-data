@@ -42,7 +42,7 @@ redimensionnable (poignée du coin bas-droit ; **double-clic** sur sa barre de t
   par tous les personnages, par extension, avec qui les connaît) ;
 - un **tableau sans trait** (colonnes alignées, en-têtes expliqués au survol) liste tous les
   personnages connus, le personnage joué en tête : **Niveau**, **iLvl** (niveau d'objet équipé),
-  **Métiers** (icône et niveau des deux métiers principaux), **Sacs et banques** (de 0 à 4
+  **Métiers** (icône et niveau des deux métiers principaux ; **clic** : objets et recettes de ce métier), **Sacs et banques** (de 0 à 4
   icônes : sacs, banque, banque de bataillon, banque de guilde, quand elles sont relevées et non
   vides, sans banque de bataillon sur WoW Forever ; au survol, nombre d'objets et date du relevé ; **clic** sur une icône : son contenu, comme
   depuis la fiche du personnage), **Or**, **Temps de jeu**, **Vu**
@@ -237,6 +237,7 @@ other language).*
 
 ## Version
 
+`2.13.1` : **clic sur un métier** dans le tableau (colonnes Métiers de chaque personnage) : fiche de ce métier (objets de métier et recettes apprises), comme depuis la fiche du personnage.
 `2.13.0` : **clic sur une icône de métier** de l'en-tête : recettes de ce métier connues par tous les personnages, par extension (repliables), avec qui les connaît ; recettes apprises chez un maître de métier (ou par un objet) relevées aussitôt, sans attendre l'ouverture de la fenêtre du métier.
 `2.12.0` : icône de **cumul complet** (coffre qui déborde) à droite des cumuls : tous les sacs et toutes les banques ensemble, sans doublon (une banque de bataillon par compte, une banque de guilde par guilde) ; affichage selon l'option « Contenu des cumuls ».
 `2.11.0` : en-tête de la liste : « · » entre l'or total et les icônes de cumul, puis « · » et une icône par métier avec le meilleur niveau atteint parmi tous les personnages (au survol : nom, niveau et personnage).

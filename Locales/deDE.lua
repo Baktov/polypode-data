@@ -106,6 +106,7 @@ P.AddTranslations(ns.L, "deDE", {
 	["Clic : recettes de tous les personnages"] = "Klick: Rezepte aller Charaktere",
 	["Tous les sacs et toutes les banques"] = "Alle Taschen und alle Banken",
 	["Sans doublon : une banque de bataillon par compte, une banque de guilde par guilde."] = "Ohne Doppelte: eine Kriegsmeutenbank pro Account, eine Gildenbank pro Gilde.",
+	["Clic : objets et recettes de ce métier"] = "Klick: Gegenstände und Rezepte dieses Berufs",
 	["Sacs et banques"] = "Taschen und Banken",
 	["Sacs, banque, banque de bataillon et banque de guilde relevés et non vides. Clic sur une icône : son contenu."] = "Taschen, Bank, Kriegsmeutenbank und Gildenbank, erfasst und nicht leer. Klick auf ein Symbol: sein Inhalt.",
 	["Clic : contenu détaillé"] = "Klick: detaillierter Inhalt",

@@ -476,6 +476,11 @@ local COLUMNS = {
 	end, sort = function(key)
 		local profession = MainProfession(key, 1)
 		return profession and profession.level
+	end, click = function(key)
+		local profession = MainProfession(key, 1)
+		return profession and function()
+			ns.OpenProfessionCard(key, profession.slot)
+		end
 	end, align = "LEFT",
 	tip = { L["Métiers"], L["Métiers principaux et leur niveau (tous les métiers au survol d'un personnage)."] } },
 	{ "", function(key)
@@ -484,6 +489,11 @@ local COLUMNS = {
 	end, sort = function(key)
 		local profession = MainProfession(key, 2)
 		return profession and profession.level
+	end, click = function(key)
+		local profession = MainProfession(key, 2)
+		return profession and function()
+			ns.OpenProfessionCard(key, profession.slot)
+		end
 	end, align = "LEFT",
 	tip = { L["Métiers"], L["Second métier principal et son niveau."] } },
 	-- Sacs et banques : 0 à 4 icônes (connus et non vides), clic = contenu (comme la fiche).
@@ -876,6 +886,7 @@ local function OpenProfessionCard(key, professionSlot)
 		return ProfessionEntries(key, professionSlot)
 	end)
 end
+ns.OpenProfessionCard = OpenProfessionCard -- colonnes Métiers du tableau (définies plus haut)
 
 -- Lignes du détail d'un personnage (infobulle au survol et fiche épinglée). Une ligne peut avoir
 -- une colonne de droite (right : métiers deux par ligne). noEquipment : sans la liste de
@@ -2203,13 +2214,46 @@ local function CellIcon(row, i, j)
 	return button
 end
 
--- Icône de sac / banque sous la souris dans une ligne, ou nil (clic de la ligne : voir onClick).
+-- Zone cliquable d'une cellule (colonnes avec click : Métiers, 2.13.1) : action de la cellule.
+local function CellClick(row, i)
+	row.cellClicks = row.cellClicks or {}
+	local button = row.cellClicks[i]
+	if not button then
+		button = CreateFrame("Button", nil, row)
+		local highlight = button:CreateTexture(nil, "HIGHLIGHT")
+		highlight:SetAllPoints()
+		highlight:SetColorTexture(1, 1, 1, 0.08)
+		button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+		button:SetScript("OnClick", function(self)
+			if self.action then
+				self.action()
+			end
+		end)
+		button:SetScript("OnEnter", function(self)
+			GameTooltip:SetOwner(self, "ANCHOR_TOP")
+			GameTooltip:AddLine(L["Clic : objets et recettes de ce métier"], 0.6, 0.6, 0.6)
+			ShowTooltip()
+		end)
+		button:SetScript("OnLeave", GameTooltip_Hide)
+		row.cellClicks[i] = button
+	end
+	button:SetFrameLevel(row:GetFrameLevel() + 3)
+	return button
+end
+
+-- Icône de sac / banque ou cellule cliquable sous la souris dans une ligne, ou nil (clic arrivé
+-- à la ligne : voir onClick). Renvoie l'action à lancer.
 local function CellIconUnderMouse(row)
 	for _, buttons in pairs(row and row.cellIcons or {}) do
 		for _, button in ipairs(buttons) do
 			if button:IsShown() and button.container and button:IsMouseOver() then
-				return button
+				return button.container.open
 			end
+		end
+	end
+	for _, button in pairs(row and row.cellClicks or {}) do
+		if button:IsShown() and button.action and button:IsMouseOver() then
+			return button.action
 		end
 	end
 end
@@ -2225,6 +2269,10 @@ local function LayoutCells(row, data)
 			button:Hide()
 			button.container = nil
 		end
+	end
+	for _, button in pairs(row.cellClicks or {}) do
+		button:Hide()
+		button.action = nil
 	end
 	local offset = ColumnsStart(row)
 	local firstCell
@@ -2244,6 +2292,18 @@ local function LayoutCells(row, data)
 			cell:SetJustifyH(COLUMNS[i] and COLUMNS[i].align or "RIGHT") -- à droite, sauf Métiers
 			cell:SetText(data.cells[i] or "")
 			cell:Show()
+			local column = COLUMNS[i]
+			local action = column and column.click and data.key and not data.columnHeader and column.click(data.key)
+			if action then
+				local button = CellClick(row, i)
+				button.action = action
+				button:ClearAllPoints()
+				button:SetPoint("TOP", row, "TOP")
+				button:SetPoint("BOTTOM", row, "BOTTOM")
+				button:SetPoint("LEFT", cell, "LEFT", -2, 0)
+				button:SetWidth(math.min(width, math.ceil(cell:GetStringWidth()) + 4))
+				button:Show()
+			end
 			for j, container in ipairs(data.icons and data.icons[i] or {}) do
 				local button = CellIcon(row, i, j)
 				-- Au-dessus de la ligne à chaque passage (lignes recyclées par la liste) : sinon le
@@ -3159,9 +3219,9 @@ local function Build()
 			end
 			-- Clic arrivé à la ligne alors que la souris est sur une icône de sac / banque : c'est
 			-- l'icône qui l'ouvre (selon l'option d'affichage), pas la fiche du personnage.
-			local icon = CellIconUnderMouse(data.cellRow)
-			if icon then
-				icon.container.open()
+			local action = CellIconUnderMouse(data.cellRow)
+			if action then
+				action()
 			elseif button == "RightButton" then
 				ShowForgetMenu(data.key)
 			else
