@@ -342,6 +342,10 @@ end
 
 -- Icônes des sacs et banques (utilisées par l'interface de Blizzard) : texture, ou atlas pour le
 -- bataillon. Boutons de l'en-tête (personnage joué) et colonne « Sacs et banques » du tableau.
+-- Banque de bataillon : pas sur WoW Forever (noms de famille, P.HasSurnames) ni sans ses
+-- emplacements (Enum.BagIndex.AccountBankTab_1) : ni icône, ni ligne dans le détail (2.8.1).
+local HAS_WARBAND_BANK = not (P.HasSurnames and P.HasSurnames())
+	and Enum ~= nil and Enum.BagIndex ~= nil and Enum.BagIndex.AccountBankTab_1 ~= nil
 local CONTAINER_SPECS = {
 	{ code = "B", texture = "Interface\\Icons\\INV_Misc_Bag_08" },
 	{ code = "K", texture = "Interface\\Icons\\INV_Misc_Coin_02" },
@@ -351,6 +355,9 @@ local CONTAINER_SPECS = {
 local CONTAINER_SPEC = {}
 for _, spec in ipairs(CONTAINER_SPECS) do
 	CONTAINER_SPEC[spec.code] = spec
+end
+if not HAS_WARBAND_BANK then
+	table.remove(CONTAINER_SPECS, 3) -- « A »
 end
 
 -- Pose l'icône d'un sac / d'une banque sur une texture (atlas si le jeu le connaît).
@@ -834,7 +841,7 @@ CharacterContainers = function(key)
 		end
 	end
 	local account = AccountOf(key)
-	local bank = WarbandBanks()[account]
+	local bank = HAS_WARBAND_BANK and WarbandBanks()[account]
 	if bank then
 		result[#result + 1] = { code = "A", label = L["Banque de bataillon"], title = L["Banque de bataillon"],
 			data = bank.data, version = bank.version, note = Gray(Read(bank.version)),

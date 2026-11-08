@@ -37,7 +37,7 @@ redimensionnable (poignée du coin bas-droit ; **double-clic** sur sa barre de t
   personnages connus, le personnage joué en tête : **Niveau**, **iLvl** (niveau d'objet équipé),
   **Métiers** (icône et niveau des deux métiers principaux), **Sacs et banques** (de 0 à 4
   icônes : sacs, banque, banque de bataillon, banque de guilde, quand elles sont relevées et non
-  vides ; au survol, nombre d'objets et date du relevé ; **clic** sur une icône : son contenu, comme
+  vides, sans banque de bataillon sur WoW Forever ; au survol, nombre d'objets et date du relevé ; **clic** sur une icône : son contenu, comme
   depuis la fiche du personnage), **Or**, **Temps de jeu**, **Vu**
   (« en ligne » en vert, ou quand le personnage a été vu connecté) ;
 - **au survol d'un personnage**, le détail : race, classe, spécialisation, faction, zone, niveau
@@ -230,6 +230,7 @@ other language).*
 
 ## Version
 
+`2.8.1` : WoW Forever : plus d'icône ni de ligne « Banque de bataillon » (elle n'existe pas dans cette version du jeu).
 `2.8.0` : colonne **Sacs et banques** du tableau : de 0 à 4 icônes (sacs, banque, banque de bataillon, banque de guilde) relevées et non vides, clic = contenu ; banque du personnage sans relevé : « Banque vide ou banque pas encore relevée ».
 `2.7.1` : fenêtre du temps de jeu : redimensionnement par la poignée du coin corrigé (plus d'agrandissement d'un coup hors de l'écran ; coin haut-gauche fixe, taille bornée à l'écran).
 `2.7.0` : double-clic sur la barre de titre (fenêtre Data, fenêtre du temps de jeu) : retour à la taille par défaut (Polypode 2.12).

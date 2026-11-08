@@ -34,7 +34,7 @@ The **Data** button (title bar of the Polypode window) or `/poly data` opens a r
 - a **borderless table** (aligned columns, headers explained on hover) lists every known
   character, the current character first: **Level**, **iLvl** (equipped item level),
   **Professions** (icon and level of the two main professions), **Bags and banks** (0 to 4
-  icons: bags, bank, warband bank, guild bank, when recorded and not empty; on hover, number of
+  icons: bags, bank, warband bank, guild bank, when recorded and not empty, no warband bank on WoW Forever; on hover, number of
   items and date of the record; **click** an icon: its contents, as from the character sheet),
   **Gold**, **Time played**,
   **Seen** ("online" in green, or when the character was last seen logged in);
