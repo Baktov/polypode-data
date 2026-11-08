@@ -1178,6 +1178,127 @@ local function OpenTotalContainer(code)
 	end, nil, nil, nil, TotalView)
 end
 
+-- RECETTES D'UN MÉTIER, TOUS PERSONNAGES (clic sur une icône de métier de l'en-tête, 2.13.0) ------
+-- Section R de chaque personnage : recettes du métier skillLine (métiers d'extension c<id> dont la
+-- base est skillLine), regroupées par extension (la plus récente en tête, repliables), chaque
+-- recette suivie des personnages qui la connaissent.
+local function AllRecipeEntries(skillLine)
+	local entries = {}
+	local function Add(text, detail, hint)
+		entries[#entries + 1] = { text = text, detail = detail, hint = hint }
+	end
+	local tiers, total = {}, 0
+	for key in pairs(ns.GetKeys()) do
+		local recipes = Sections(key).R or {}
+		local mine = {}
+		for itemKey, value in pairs(recipes) do
+			local child = tonumber(tostring(itemKey):match("^c(%d+)$") or "")
+			local base, label = tostring(value):match("^(%d+)/(.*)$")
+			if child and tonumber(base) == skillLine then
+				mine[child] = true
+				tiers[child] = tiers[child] or { child = child, label = label ~= "" and label or L["n° %s"]:format(child),
+					recipes = {}, count = 0 }
+			end
+		end
+		for itemKey, value in pairs(recipes) do
+			local recipeID = tonumber(tostring(itemKey):match("^r(%d+)$") or "")
+			local child = tonumber(value)
+			if recipeID and child and mine[child] then
+				local tier = tiers[child]
+				if not tier.recipes[recipeID] then
+					tier.recipes[recipeID] = {}
+					tier.count = tier.count + 1
+					total = total + 1
+				end
+				table.insert(tier.recipes[recipeID], key)
+			end
+		end
+	end
+	Add("|cffffd200" .. L["Recettes connues"] .. "|r" .. Gray(" (" .. total .. ")"))
+	if total == 0 then
+		Add("  " .. Gray(L["Pas encore relevées : ouvrez une fois la fenêtre de ce métier avec chaque personnage."]))
+		return entries
+	end
+	local order = {}
+	for _, tier in pairs(tiers) do
+		if tier.count > 0 then
+			order[#order + 1] = tier
+		end
+	end
+	table.sort(order, function(a, b)
+		return a.child > b.child
+	end)
+	for _, tier in ipairs(order) do
+		local stateKey = "*#" .. tier.child
+		local open = expandedTiers[stateKey]
+		Add("|cffffd200" .. (open and "-" or "+") .. "|r " .. tier.label .. Gray(" (" .. tier.count .. ")"), function()
+			expandedTiers[stateKey] = not open or nil
+			ns.Refresh()
+		end, open and L["Clic : replier"] or L["Clic : déplier"])
+		if open then
+			local rows = {}
+			for recipeID, holders in pairs(tier.recipes) do
+				local names = {}
+				for _, key in ipairs(holders) do
+					names[#names + 1] = P.GetDisplayName(key)
+				end
+				table.sort(names)
+				rows[#rows + 1] = { id = recipeID, name = SpellName(recipeID) or L["recette n° %s"]:format(recipeID),
+					holders = table.concat(names, ", ") }
+			end
+			table.sort(rows, function(a, b)
+				return Normalize(a.name) < Normalize(b.name)
+			end)
+			for _, row in ipairs(rows) do
+				local icon = C_Spell and C_Spell.GetSpellTexture and C_Spell.GetSpellTexture(row.id)
+				Add("      " .. Icon(icon) .. " " .. row.name .. Gray("  " .. row.holders), function()
+					ShowSpell(row.id)
+				end, L["Clic : infobulle de la recette"])
+			end
+		end
+	end
+	return entries
+end
+
+local function OpenAllRecipes(profession)
+	OpenCard(L["Recettes : %s"]:format(profession.name), function()
+		return AllRecipeEntries(profession.skillLine)
+	end)
+end
+
+-- Bouton n° index des métiers de l'en-tête (créé à la demande, recyclé).
+local function ProfessionHeaderButton(panel, index)
+	local button = panel.professionButtons[index]
+	if button then
+		return button
+	end
+	button = CreateFrame("Button", nil, panel)
+	button:SetHeight(CELL_ICON_SIZE)
+	button:SetFrameLevel(panel:GetFrameLevel() + 5)
+	button.icon = button:CreateTexture(nil, "ARTWORK")
+	button.icon:SetSize(CELL_ICON_SIZE, CELL_ICON_SIZE)
+	button.icon:SetPoint("LEFT")
+	button.level = button:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	button.level:SetPoint("LEFT", button.icon, "RIGHT", 3, 0)
+	local highlight = button:CreateTexture(nil, "HIGHLIGHT")
+	highlight:SetAllPoints()
+	highlight:SetColorTexture(1, 1, 1, 0.1)
+	button:SetScript("OnClick", function(self)
+		OpenAllRecipes(self.profession)
+	end)
+	button:SetScript("OnEnter", function(self)
+		local profession = self.profession
+		GameTooltip:SetOwner(self, "ANCHOR_TOP")
+		GameTooltip:AddLine(profession.name)
+		GameTooltip:AddLine(L["Meilleur niveau : %s (%s)"]:format(profession.level, CharacterName(profession.key)), 1, 1, 1)
+		GameTooltip:AddLine(L["Clic : recettes de tous les personnages"], 0.6, 0.6, 0.6)
+		ShowTooltip()
+	end)
+	button:SetScript("OnLeave", GameTooltip_Hide)
+	panel.professionButtons[index] = button
+	return button
+end
+
 local REOPEN_HINT_SHORT = {
 	B = L["sacs relus aussitôt"],
 	K = L["à rouvrir pour la relever"],
@@ -2967,26 +3088,12 @@ local function Build()
 		button:Hide()
 		listPanel.totalButtons[#listPanel.totalButtons + 1] = button
 	end
-	-- Métiers : une icône par métier et le meilleur niveau (placés par ns.Refresh) ; infobulle =
-	-- nom, niveau et personnage qui l'a atteint.
-	listPanel.professionText = listPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	listPanel.professionText:SetWordWrap(false)
-	listPanel.professionText:Hide()
-	local professionHover = CreateFrame("Frame", nil, listPanel)
-	professionHover:SetFrameLevel(listPanel:GetFrameLevel() + 5)
-	professionHover:EnableMouse(true)
-	professionHover:SetScript("OnEnter", function(self)
-		GameTooltip:SetOwner(self, "ANCHOR_TOP")
-		GameTooltip:AddLine(L["Meilleur niveau de chaque métier"])
-		for _, profession in ipairs(self.professions or {}) do
-			GameTooltip:AddDoubleLine(Icon(profession.icon) .. " " .. profession.name,
-				profession.level .. Gray("  " .. CharacterName(profession.key)), 1, 1, 1, 1, 1, 1)
-		end
-		ShowTooltip()
-	end)
-	professionHover:SetScript("OnLeave", GameTooltip_Hide)
-	professionHover:Hide()
-	listPanel.professionHover = professionHover
+	-- Métiers : un bouton par métier (icône et meilleur niveau, placés par ns.Refresh) ; infobulle =
+	-- nom, niveau et personnage qui l'a atteint ; clic = recettes de tous les personnages (2.13.0).
+	listPanel.professionDot = listPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	listPanel.professionDot:SetText(Gray("·"))
+	listPanel.professionDot:Hide()
+	listPanel.professionButtons = {}
 
 	-- Poignée de redimensionnement (coin bas-droit), taille gardée dans PolypodeDataDB.window.
 	local grip = CreateFrame("Button", nil, frame)
@@ -3171,25 +3278,27 @@ function ns.Refresh()
 			offset = offset + CELL_ICON_SIZE + CELL_ICON_GAP
 		end
 	end
-	local professionText, professionHover = listPanel.professionText, listPanel.professionHover
-	if professionText then
-		if #professions > 0 then
-			local parts = {}
-			for _, profession in ipairs(professions) do
-				parts[#parts + 1] = Icon(profession.icon) .. " " .. profession.level
-			end
-			professionText:SetText((anyBags and (Gray("·") .. "  ") or "") .. table.concat(parts, "   "))
-			professionText:ClearAllPoints()
-			professionText:SetPoint("LEFT", listPanel.header, "LEFT", offset + (anyBags and 5 or 0), 0)
-			professionText:Show()
-			professionHover.professions = professions
-			professionHover:ClearAllPoints()
-			professionHover:SetPoint("TOPLEFT", professionText, "TOPLEFT", 0, 2)
-			professionHover:SetSize(math.ceil(professionText:GetStringWidth()), professionText:GetStringHeight() + 4)
-			professionHover:Show()
-		else
-			professionText:Hide()
-			professionHover:Hide()
+	local dot = listPanel.professionDot
+	if dot then
+		dot:SetShown(anyBags and #professions > 0)
+		if anyBags and #professions > 0 then
+			dot:ClearAllPoints()
+			dot:SetPoint("LEFT", listPanel.header, "LEFT", offset + 4, 0)
+			offset = offset + 4 + math.ceil(dot:GetStringWidth()) + 8
+		end
+		for index, profession in ipairs(professions) do
+			local button = ProfessionHeaderButton(listPanel, index)
+			button.profession = profession
+			button.icon:SetTexture(profession.icon)
+			button.level:SetText(profession.level)
+			button:SetWidth(CELL_ICON_SIZE + 3 + math.ceil(button.level:GetStringWidth()))
+			button:ClearAllPoints()
+			button:SetPoint("LEFT", listPanel.header, "LEFT", offset, 0)
+			button:Show()
+			offset = offset + button:GetWidth() + 10
+		end
+		for index = #professions + 1, #listPanel.professionButtons do
+			listPanel.professionButtons[index]:Hide()
 		end
 	end
 	P.SetListData(listPanel, items)

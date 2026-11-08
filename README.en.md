@@ -36,7 +36,8 @@ The **Data** button (title bar of the Polypode window) or `/poly data` opens a r
   account, one guild bank per guild);
   on hover, the number of items; on **click**, the combined contents of every character (accounts,
   guilds), as a list or icons depending on the **Totals content** option; then one icon per **profession** with the best level
-  reached among all characters (on hover: profession, level and character);
+  reached among all characters (on hover: profession, level and character; **click**: recipes of that
+  profession known by all characters, by expansion, with who knows them);
 - a **borderless table** (aligned columns, headers explained on hover) lists every known
   character, the current character first: **Level**, **iLvl** (equipped item level),
   **Professions** (icon and level of the two main professions), **Bags and banks** (0 to 4

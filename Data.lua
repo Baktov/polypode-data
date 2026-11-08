@@ -272,12 +272,57 @@ end
 --   c<métier d'extension> = « métier de base/nom de l'extension » (base = skillLine de la section T).
 -- Les métiers d'extension relus remplacent leurs anciennes entrées ; ceux des autres métiers (ou
 -- non relus) sont gardés. Nom et icône d'une recette : ceux de son sort (recipeID = spellID).
+-- Recettes apprises hors de la fenêtre du métier (NEW_RECIPE_LEARNED, 2.13.0 : maître de métier,
+-- objet de recette) : ajoutées au relevé R existant au prochain relevé, sans attendre que la
+-- fenêtre du métier soit ouverte. [recipeID] = true.
+local learnedRecipes = {}
+
+function ns.NoteLearnedRecipe(recipeID)
+	if type(recipeID) == "number" then
+		learnedRecipes[recipeID] = true
+	end
+end
+
+-- Relevé R du personnage joué complété par les recettes de learnedRecipes (métier d'extension lu
+-- par GetProfessionInfoByRecipeID) ; nil si rien à ajouter.
+local function AddLearnedRecipes()
+	local ui = C_TradeSkillUI
+	if not next(learnedRecipes) or not (ui and ui.GetProfessionInfoByRecipeID) then
+		return nil
+	end
+	local own = store and store[P.GetCharKey()]
+	local fresh = {}
+	for key, value in pairs(own and own.s.R or {}) do
+		fresh[key] = value
+	end
+	local added = false
+	for recipeID in pairs(learnedRecipes) do
+		local ok, prof = pcall(ui.GetProfessionInfoByRecipeID, recipeID)
+		local child = ok and prof and prof.professionID
+		local base = ok and prof and prof.parentProfessionID
+		if child and child ~= 0 then
+			fresh["r" .. recipeID] = child
+			if not fresh["c" .. child] and base and base ~= 0 then
+				local label = prof.expansionName ~= "" and prof.expansionName or prof.professionName
+				fresh["c" .. child] = base .. "/" .. Clean(label or "")
+			end
+			added = true
+		end
+	end
+	wipe(learnedRecipes)
+	return added and fresh or nil
+end
+
 local function ReadRecipes()
 	local ui = C_TradeSkillUI
-	if not (tradeSkillOpen and ui and ui.GetBaseProfessionInfo and ui.GetAllRecipeIDs and ui.GetRecipeInfo
+	if not tradeSkillOpen then
+		return AddLearnedRecipes()
+	end
+	if not (ui and ui.GetBaseProfessionInfo and ui.GetAllRecipeIDs and ui.GetRecipeInfo
 		and ui.GetProfessionInfoByRecipeID) then
 		return nil
 	end
+	wipe(learnedRecipes) -- la fenêtre ouverte relit tout
 	local function Is(fn)
 		return fn and select(2, pcall(fn)) == true
 	end
@@ -832,6 +877,7 @@ for _, event in ipairs({
 	"PLAYER_INTERACTION_MANAGER_FRAME_SHOW", "PLAYER_INTERACTION_MANAGER_FRAME_HIDE", -- banque de guilde
 	"GUILDBANKBAGSLOTS_CHANGED", "GUILDBANK_UPDATE_MONEY", "PLAYER_GUILD_UPDATE",
 	"TRADE_SKILL_SHOW", "TRADE_SKILL_CLOSE", "TRADE_SKILL_LIST_UPDATE", "TRADE_SKILL_DATA_SOURCE_CHANGED", -- recettes
+	"NEW_RECIPE_LEARNED", -- recette apprise hors de la fenêtre du métier (2.13.0)
 }) do
 	if not (C_EventUtils and C_EventUtils.IsEventValid) or C_EventUtils.IsEventValid(event) then
 		pcall(events.RegisterEvent, events, event)
@@ -892,6 +938,8 @@ events:SetScript("OnEvent", function(_, event, ...)
 		end
 	elseif event == "ACHIEVEMENT_EARNED" then
 		ns.MarkAchievementPointsDirty() -- recompté au prochain relevé
+	elseif event == "NEW_RECIPE_LEARNED" then
+		ns.NoteLearnedRecipe((...))
 	elseif event == "TRADE_SKILL_SHOW" then
 		tradeSkillOpen = true
 	elseif event == "TRADE_SKILL_CLOSE" then
