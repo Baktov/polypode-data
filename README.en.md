@@ -210,6 +210,12 @@ Polypode 0.57; otherwise the options panel):
 
 ---
 
+## License
+
+Polypode Data is free software, under the **GNU GPL version 3** ([`LICENSE`](LICENSE)
+file): you may take it, modify it and redistribute it, as long as you keep this license and
+credit the author. Copyright (C) 2026 Baktov.
+
 ## Languages
 
 Polypode Data follows the language chosen in Polypode ("Langue / Language" option,

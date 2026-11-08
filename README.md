@@ -222,6 +222,12 @@ options** (nécessite Polypode 0.57 ; sinon le panneau d'options) :
 
 ---
 
+## Licence
+
+Polypode Data est un logiciel libre, sous licence **GNU GPL version 3** (fichier
+[`LICENSE`](LICENSE)) : vous pouvez le reprendre, le modifier et le redistribuer, à condition de
+garder cette licence et de citer l'auteur. Copyright (C) 2026 Baktov.
+
 ## Langues (Languages)
 
 Polypode Data s'affiche dans la langue choisie dans Polypode (option « Langue / Language », `/poly langue`),
@@ -237,6 +243,7 @@ other language).*
 
 ## Version
 
+`2.13.2` : licence libre **GNU GPL version 3** (fichier `LICENSE`).
 `2.13.1` : **clic sur un métier** dans le tableau (colonnes Métiers de chaque personnage) : fiche de ce métier (objets de métier et recettes apprises), comme depuis la fiche du personnage.
 `2.13.0` : **clic sur une icône de métier** de l'en-tête : recettes de ce métier connues par tous les personnages, par extension (repliables), avec qui les connaît ; recettes apprises chez un maître de métier (ou par un objet) relevées aussitôt, sans attendre l'ouverture de la fenêtre du métier.
 `2.12.0` : icône de **cumul complet** (coffre qui déborde) à droite des cumuls : tous les sacs et toutes les banques ensemble, sans doublon (une banque de bataillon par compte, une banque de guilde par guilde) ; affichage selon l'option « Contenu des cumuls ».
