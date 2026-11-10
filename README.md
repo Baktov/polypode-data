@@ -141,7 +141,8 @@ toute seule (butin, dépôt, données reçues) ; le bouton la referme.
 **Ranger** (en haut de la fiche, et aussi dans la barre de titre de la fenêtre, entre **Dépôts** et
 l'icône du sac : même bouton, même fonction ; ou **Maj + clic droit** sur le bouton **Data** de la
 fenêtre Polypode ou de la barre flottante, dont le simple clic droit ouvre une petite fenêtre
-d'options) : dépose les objets des sacs qui se trouvent **déjà** dans une
+d'options ; avec l'**interface manette** de Blizzard, où Maj + clic est malaisé, ce clic droit
+ouvre un menu : options, ranger / arrêter le rangement) : dépose les objets des sacs qui se trouvent **déjà** dans une
 banque ouverte, et seulement eux :
 
 - destination : la **banque du personnage** si l'objet y est, sinon la **banque de bataillon**
@@ -243,6 +244,7 @@ other language).*
 
 ## Version
 
+`2.14.0` : interface manette de Blizzard : clic droit sur le bouton Data = menu (options, ranger / arrêter), à la place de Maj + clic droit ; infobulle adaptée (Polypode 2.19). À la souris, rien ne change.
 `2.13.2` : licence libre **GNU GPL version 3** (fichier `LICENSE`).
 `2.13.1` : **clic sur un métier** dans le tableau (colonnes Métiers de chaque personnage) : fiche de ce métier (objets de métier et recettes apprises), comme depuis la fiche du personnage.
 `2.13.0` : **clic sur une icône de métier** de l'en-tête : recettes de ce métier connues par tous les personnages, par extension (repliables), avec qui les connaît ; recettes apprises chez un maître de métier (ou par un objet) relevées aussitôt, sans attendre l'ouverture de la fenêtre du métier.

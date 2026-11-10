@@ -131,7 +131,9 @@ deposit, data received); the button closes it again.
 
 **Deposit** (at the top of the sheet, and also in the window's title bar, between **Deposits** and
 the bag icon: same button, same function; or **Shift + right-click** on the **Data** button of the
-Polypode window or of the floating bar, whose plain right-click opens a small options window):
+Polypode window or of the floating bar, whose plain right-click opens a small options window;
+with Blizzard's **gamepad interface**, where Shift + click is awkward, that right-click opens a
+menu: options, deposit / stop depositing):
 deposits the bag items that are **already** in an open bank, and only those:
 
 - destination: the **character bank** if the item is there, otherwise the **warband bank** if it is

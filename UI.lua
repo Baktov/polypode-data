@@ -3477,6 +3477,44 @@ if P.AddTitleButton then
 	-- Clic droit (bouton de la fenêtre Polypode et celui de la colonne de la barre flottante) :
 	-- options, comme les autres modules ; Maj + clic droit : la même action que « Ranger »
 	-- (DEPOSIT_ACTION) ; sans banque utilisable, la raison s'affiche.
+	local function ShowOptionsPopup(button)
+		if P.ToggleOptionsPopup and settingsPopup then
+			P.ToggleOptionsPopup(button, settingsPopup) -- petite fenêtre (Polypode 0.57.0)
+		else
+			OpenDataOptions()
+		end
+	end
+	local function ToggleDeposit()
+		if not ns.IsDepositRunning() then
+			local ok, reason = ns.CanDeposit()
+			if not ok then
+				UIErrorsFrame:AddMessage(reason, 1, 0.3, 0.3)
+				return
+			end
+		end
+		DEPOSIT_ACTION.onClick()
+		ns.UpdateDepositControls()
+	end
+	-- Interface manette de Blizzard (P.IsGamepadUI, Polypode 2.15.1, testée avant usage) : Maj +
+	-- clic y est malaisé ; dans ce mode seulement, le clic droit ouvre un menu (options, ranger).
+	local function IsGamepad()
+		return P.IsGamepadUI ~= nil and P.IsGamepadUI()
+	end
+	local function TooltipLines()
+		local lines = {
+			L["Données des personnages"],
+			L["Niveau, or, métiers, équipement, sacs et banques de tous vos personnages, avec recherche "
+				.. "d'objet (détail au survol d'un personnage)."],
+		}
+		if IsGamepad() then
+			lines[#lines + 1] = L["Clic droit : options de Polypode Data, ranger les sacs dans la banque ouverte."]
+		else
+			lines[#lines + 1] = L["Clic droit : options de Polypode Data."]
+			lines[#lines + 1] = L["Maj + clic droit : ranger (comme le bouton « Ranger » : objets des sacs déjà présents dans la "
+				.. "banque ouverte) ; pendant le rangement, Maj + clic droit pour l'arrêter."]
+		end
+		return lines
+	end
 	P.AddTitleButton({
 		text = L["Data"],
 		width = 50,
@@ -3484,34 +3522,23 @@ if P.AddTitleButton then
 		onClick = function(button, mouseButton)
 			if mouseButton ~= "RightButton" then
 				P.ToggleData()
-				return
+			elseif IsGamepad() and MenuUtil then
+				MenuUtil.CreateContextMenu(button, function(_, root)
+					root:CreateTitle(L["Données des personnages"])
+					root:CreateButton(L["Options de Polypode Data"], function()
+						ShowOptionsPopup(button)
+					end)
+					root:CreateButton(ns.IsDepositRunning() and L["Arrêter le rangement"]
+						or L["Ranger (sacs vers la banque ouverte)"], ToggleDeposit)
+				end)
+			elseif IsShiftKeyDown() then
+				ToggleDeposit()
+			else
+				ShowOptionsPopup(button)
 			end
-			if not IsShiftKeyDown() then
-				if P.ToggleOptionsPopup and settingsPopup then
-					P.ToggleOptionsPopup(button, settingsPopup) -- petite fenêtre (Polypode 0.57.0)
-				else
-					OpenDataOptions()
-				end
-				return
-			end
-			if not ns.IsDepositRunning() then
-				local ok, reason = ns.CanDeposit()
-				if not ok then
-					UIErrorsFrame:AddMessage(reason, 1, 0.3, 0.3)
-					return
-				end
-			end
-			DEPOSIT_ACTION.onClick()
-			ns.UpdateDepositControls()
 		end,
-		tooltip = {
-			L["Données des personnages"],
-			L["Niveau, or, métiers, équipement, sacs et banques de tous vos personnages, avec recherche "
-				.. "d'objet (détail au survol d'un personnage)."],
-			L["Clic droit : options de Polypode Data."],
-			L["Maj + clic droit : ranger (comme le bouton « Ranger » : objets des sacs déjà présents dans la "
-				.. "banque ouverte) ; pendant le rangement, Maj + clic droit pour l'arrêter."],
-		},
+		-- Infobulle qui suit le mode (Polypode 2.19.0 : fonction acceptée), sinon liste fixe.
+		tooltip = P.TITLE_TOOLTIP_FUNCTION and TooltipLines or TooltipLines(),
 		onCreate = function(button)
 			P.ui.dataButton = button
 		end,

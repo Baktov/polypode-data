@@ -26,6 +26,8 @@ donnée que si elle sert à gérer ses personnages.
 
 ## Dépendances vers Polypode (API publique utilisée)
 
+`P.IsGamepadUI` (si présente, Polypode 2.15.1 ; UI.lua, 2.14.0) : en interface manette, le clic droit sur le bouton Data ouvre un menu `MenuUtil.CreateContextMenu` (locales `ShowOptionsPopup`, `ToggleDeposit` — aussi utilisées par le clic droit et Maj + clic droit à la souris). `P.TITLE_TOOLTIP_FUNCTION` (si présent, Polypode 2.19) : infobulle du bouton en fonction `TooltipLines`, qui suit le mode ; sinon liste fixe.
+
 `P.EnableTitleDoubleClick(fenêtre, remise, hauteur)` (si présente, Polypode 2.12 : double-clic sur la barre de titre, taille par défaut). Poignée de redimensionnement de la fenêtre du temps de jeu (`BuildPlayed`) : au `OnMouseDown`, ancre `TOPLEFT` (coin haut-gauche fixe, gardée comme position `played.point` / `x` / `y`) et `SetResizeBounds` maximum = place jusqu'aux bords droit et bas de l'écran, puis `StartSizing("BOTTOMRIGHT", true)` (fenêtre retenue dans l'écran : sans cela, elle s'agrandissait d'un coup hors de l'écran, comme Histoire 1.14.1).
 Taille enregistrée ramenée à celle de l'écran à la construction.
 

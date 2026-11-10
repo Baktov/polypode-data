@@ -201,6 +201,9 @@ P.AddTranslations(ns.L, "itIT", {
 	["Options de Polypode Data"] = "Opzioni di Polypode Data",
 	["Niveau, or, métiers, équipement, sacs et banques de tous vos personnages, avec recherche d'objet (détail au survol d'un personnage)."] = "Livello, oro, professioni, equipaggiamento, borse e banche di tutti i tuoi personaggi, con ricerca di oggetti (dettaglio passando sopra un personaggio).",
 	["Clic droit : options de Polypode Data."] = "Clic destro: opzioni di Polypode Data.",
+	["Clic droit : options de Polypode Data, ranger les sacs dans la banque ouverte."] = "Clic destro: opzioni di Polypode Data, deposita le borse nella banca aperta.",
+	["Arrêter le rangement"] = "Interrompi il deposito",
+	["Ranger (sacs vers la banque ouverte)"] = "Deposita (borse nella banca aperta)",
 	["Maj + clic droit : ranger (comme le bouton « Ranger » : objets des sacs déjà présents dans la banque ouverte) ; pendant le rangement, Maj + clic droit pour l'arrêter."] = "Maiusc + clic destro: deposita (come il pulsante «Deposita»: oggetti delle borse già presenti nella banca aperta); durante il deposito, Maiusc + clic destro per interromperlo.",
 	["données des personnages (or, métiers, équipement, sacs, banques)"] = "dati dei personaggi (oro, professioni, equipaggiamento, borse, banche)",
 })
