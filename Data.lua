@@ -531,6 +531,29 @@ if P.RegisterCharacterData then
 				ns.Refresh()
 			end
 		end,
+		-- Fusion de deux fiches d'un même personnage (Polypode 2.32) : chaque section de « de » plus
+		-- récente (version) ou absente de « vers » y est reportée, puis « de » est oublié.
+		merge = function(from, to)
+			local source = store and store[from]
+			if not source or from == to then
+				return
+			end
+			local target = Entry(to, true)
+			for section, data in pairs(source.s or {}) do
+				local version = tonumber(source.t and source.t[section]) or 0
+				if not target.s[section] or version > (tonumber(target.t[section]) or 0) then
+					target.s[section] = data
+					target.t[section] = source.t and source.t[section]
+				end
+			end
+			if source.seen and (not target.seen or source.seen > target.seen) then
+				target.seen = source.seen
+			end
+			store[from] = nil
+			if ns.Refresh then
+				ns.Refresh()
+			end
+		end,
 	})
 end
 

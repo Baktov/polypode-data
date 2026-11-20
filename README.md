@@ -246,6 +246,7 @@ other language).*
 
 ## Version
 
+`2.16.0` : avec Polypode 2.32, la **fusion de deux fiches** d'un même personnage reporte sur la fiche gardée les sections relevées les plus récentes (ou absentes) de l'autre fiche, qui est ensuite oubliée.
 `2.15.0` : avec Polypode 2.29, la fenêtre s'ouvre en **tiroir** contre la fenêtre Polypode, s'y aimante ou prend la place de la **fenêtre unique**, selon l'option « Placement des fenêtres » de Polypode.
 `2.14.0` : interface manette de Blizzard : clic droit sur le bouton Data = menu (options, ranger / arrêter), à la place de Maj + clic droit ; infobulle adaptée (Polypode 2.19). À la souris, rien ne change.
 `2.13.2` : licence libre **GNU GPL version 3** (fichier `LICENSE`).
