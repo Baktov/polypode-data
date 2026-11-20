@@ -3271,6 +3271,10 @@ local function Build()
 	P.ui.dataRecipeBox = recipeBox
 
 	P.SkinFrame(frame)
+	-- Tiroir, aimant ou fenêtre unique autour de la fenêtre Polypode (Polypode 2.28 / 2.29).
+	if P.RegisterModuleWindow then
+		P.RegisterModuleWindow(frame, "Polypode_Data")
+	end
 	P.SkinPanel(listPanel)
 	if P.SkinButton then
 		P.SkinButton(optionsBtn)

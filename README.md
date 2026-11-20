@@ -202,6 +202,8 @@ options** (nécessite Polypode 0.57 ; sinon le panneau d'options) :
 
 ---
 
+Avec Polypode 2.29 et suivants, la fenêtre suit l'option **Placement des fenêtres** de Polypode : en **tiroir** (défaut), elle s'ouvre accolée à la fenêtre Polypode et la suit ; **aimantée**, elle s'y accroche quand on la glisse contre un bord ; en **fenêtre unique**, elle s'ouvre à la place du module affiché, avec la colonne des modules sur le côté.
+
 ## Fonctionnement
 
 - Chaque personnage relève ses données **2 secondes après un changement** (or, sacs, équipement,
@@ -244,6 +246,7 @@ other language).*
 
 ## Version
 
+`2.15.0` : avec Polypode 2.29, la fenêtre s'ouvre en **tiroir** contre la fenêtre Polypode, s'y aimante ou prend la place de la **fenêtre unique**, selon l'option « Placement des fenêtres » de Polypode.
 `2.14.0` : interface manette de Blizzard : clic droit sur le bouton Data = menu (options, ranger / arrêter), à la place de Maj + clic droit ; infobulle adaptée (Polypode 2.19). À la souris, rien ne change.
 `2.13.2` : licence libre **GNU GPL version 3** (fichier `LICENSE`).
 `2.13.1` : **clic sur un métier** dans le tableau (colonnes Métiers de chaque personnage) : fiche de ce métier (objets de métier et recettes apprises), comme depuis la fiche du personnage.

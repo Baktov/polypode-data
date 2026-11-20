@@ -191,6 +191,8 @@ Polypode 0.57; otherwise the options panel):
 
 ---
 
+With Polypode 2.29 and later, the window follows Polypode's **Window placement** option: as a **drawer** (default), it opens against the Polypode window and follows it; with the **magnet**, it sticks to it when dragged against an edge; as a **single window**, it opens in place of the module shown, with the column of modules on the side.
+
 ## How it works
 
 - Each character records its data **2 seconds after a change** (gold, bags, equipment, level, zone,
